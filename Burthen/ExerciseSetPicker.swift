@@ -22,13 +22,20 @@ struct ExerciseSetPicker: View {
   @State private var repetitions: Int
   @State private var wholeWeight: Int
   @State private var usesHalfWeight: Bool
+  @State private var startingWeightConfirmation: String?
+  @State private var startingWeightSaveCount = 0
   @State private var hasPendingChanges = false
   @State private var persistenceTask: Task<Void, Never>?
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   @ScaledMetric(relativeTo: .title2)
   private var unitSpacing = LayoutMetrics.Spacing.small
+
+  @ScaledMetric(relativeTo: .title2)
+  private var wheelHeight = LayoutMetrics.Size.wheelPicker
 
   init(
     exerciseSet: ExerciseSet,
@@ -101,6 +108,8 @@ struct ExerciseSetPicker: View {
           .font(.title2)
           .monospacedDigit()
           .frame(maxWidth: .infinity)
+          .frame(height: wheelHeight)
+          .clipped()
 
           ZStack {
             Picker("Weight", selection: $wholeWeight) {
@@ -112,10 +121,9 @@ struct ExerciseSetPicker: View {
                         .hidden()
                       Text(weight, format: .number)
                     }
-                    if usesHalfWeight {
-                      Text(".5")
-                        .hidden()
-                    }
+                    // Reserve the fraction width so toggling does not relayout every wheel row.
+                    Text(".5")
+                      .hidden()
                   }
                   Text(weightUnit.displayAbbreviation)
                     .hidden()
@@ -132,9 +140,8 @@ struct ExerciseSetPicker: View {
               HStack(spacing: 0) {
                 Text(Self.wholeWeightRange.upperBound, format: .number)
                   .hidden()
-                if usesHalfWeight {
-                  Text(".5")
-                }
+                Text(".5")
+                  .opacity(usesHalfWeight ? 1 : 0)
               }
               Text(weightUnit.displayAbbreviation)
             }
@@ -145,43 +152,45 @@ struct ExerciseSetPicker: View {
           .font(.title2)
           .monospacedDigit()
           .frame(maxWidth: .infinity)
+          .frame(height: wheelHeight)
+          .clipped()
         }
 
         HStack(spacing: LayoutMetrics.Spacing.large) {
-          VStack(
-            alignment: .leading,
-            spacing: LayoutMetrics.Spacing.extraSmall
-          ) {
-            Text("Set Volume")
-              .font(.subheadline)
-              .foregroundStyle(.pink)
-
-            if kind == .warmup {
-              Text("Excluded")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.secondary)
-            } else {
-              TrainingLoadText(
-                load: draftVolumeLoad,
-                emphasis: .standard
-              )
-              .font(.title3.weight(.semibold))
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .accessibilityElement(children: .ignore)
-          .accessibilityLabel("Set volume")
-          .accessibilityValue(setVolumeAccessibilityValue)
+          Spacer()
+            .frame(maxWidth: .infinity)
 
           Toggle(isOn: $usesHalfWeight) {
-            Text("+ ½ \(weightUnit.displayAbbreviation)")
+            Text("\(usesHalfWeight ? "−" : "+") ½ \(weightUnit.displayAbbreviation)")
               .frame(maxWidth: .infinity)
           }
           .toggleStyle(.button)
           .buttonStyle(.bordered)
+          .accessibilityLabel("Half \(weightUnit.spokenName)")
           .disabled(wholeWeight == Self.wholeWeightRange.upperBound)
           .frame(maxWidth: .infinity)
         }
+
+        Spacer(minLength: 0)
+
+        VStack(spacing: LayoutMetrics.Spacing.small) {
+          Button(action: setStartingWeight) {
+            Text(
+              startingWeightConfirmation == nil ? "Set as Starting Weight" : "Starting Weight Saved"
+            )
+            .frame(maxWidth: .infinity)
+            .contentTransition(.opacity)
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.large)
+          .disabled(exerciseSet.workoutExercise?.exercise == nil)
+          .accessibilityHint(
+            "Saves this exercise’s starting weight and copies it to subsequent sets.")
+        }
+        .padding(.top, LayoutMetrics.Spacing.medium)
+        .padding(.bottom, LayoutMetrics.Spacing.large)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: startingWeightConfirmation)
+        .sensoryFeedback(.success, trigger: startingWeightSaveCount)
       }
       .padding(.horizontal, LayoutMetrics.Padding.horizontalContent)
       .navigationTitle("Set \(setNumber)")
@@ -189,7 +198,7 @@ struct ExerciseSetPicker: View {
       .onChange(of: kind, scheduleSave)
       .onChange(of: repetitions, scheduleSave)
       .onChange(of: wholeWeight, updateWholeWeight)
-      .onChange(of: usesHalfWeight, scheduleSave)
+      .onChange(of: usesHalfWeight, updateHalfWeight)
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           Button("Done", action: finish)
@@ -211,24 +220,35 @@ struct ExerciseSetPicker: View {
     return "\(weight) \(weightUnit.spokenName)"
   }
 
-  private var draftVolumeLoad: VolumeLoad? {
-    let halfSteps = wholeWeight * 2 + (usesHalfWeight ? 1 : 0)
-    let weight = halfSteps == 0 ? nil : Decimal(halfSteps) / 2
+  private func setStartingWeight() {
+    persistenceTask?.cancel()
+    persistenceTask = nil
+    hasPendingChanges = true
+    applyChanges()
 
-    return VolumeLoad.forSet(
-      kind: kind,
-      repetitions: repetitions,
-      weight: weight,
-      unit: weightUnit
-    )
-  }
-
-  private var setVolumeAccessibilityValue: String {
-    if kind == .warmup {
-      return "Excluded for warm-up sets"
+    do {
+      try TrainingDataStore(modelContext: modelContext)
+        .saveStartingWeight(from: exerciseSet)
+      hasPendingChanges = false
+      let weight =
+        exerciseSet.weight.map {
+          "\($0.formatted()) \(weightUnit.displayAbbreviation)"
+        } ?? "No added weight"
+      let hasFollowingSets =
+        !(exerciseSet.workoutExercise?
+        .followingSets(after: exerciseSet).isEmpty ?? true)
+      let confirmation =
+        hasFollowingSets
+        ? "\(weight) saved. Subsequent sets updated."
+        : "\(weight) saved as this exercise’s starting weight."
+      startingWeightConfirmation = confirmation
+      startingWeightSaveCount += 1
+      AccessibilityNotification.Announcement(confirmation).post()
+    } catch {
+      startingWeightConfirmation = nil
+      errorMessage = activeWorkoutErrorMessage(for: error)
+      isShowingError = true
     }
-
-    return draftVolumeLoad?.accessibilityText ?? "Not available"
   }
 
   private func enforceWeightLimit() {
@@ -242,7 +262,14 @@ struct ExerciseSetPicker: View {
     scheduleSave()
   }
 
+  private func updateHalfWeight() {
+    // Publish discrete taps immediately; only persistence waits for the debounce.
+    applyChanges()
+    scheduleSave()
+  }
+
   private func scheduleSave() {
+    startingWeightConfirmation = nil
     hasPendingChanges = true
     persistenceTask?.cancel()
     persistenceTask = Task {

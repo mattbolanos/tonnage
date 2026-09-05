@@ -150,6 +150,24 @@ final class WorkoutExercise {
     preferredWeightUnit = newUnit
   }
 
+  /// The sets ordered after `sourceSet`, or an empty array when `sourceSet`
+  /// is the last set or does not belong to this exercise.
+  func followingSets(after sourceSet: ExerciseSet) -> [ExerciseSet] {
+    let sets = orderedSets
+    guard let sourceIndex = sets.firstIndex(where: { $0.id == sourceSet.id }) else {
+      return []
+    }
+
+    return Array(sets.dropFirst(sourceIndex + 1))
+  }
+
+  func populateFollowingSetWeights(from sourceSet: ExerciseSet) {
+    for exerciseSet in followingSets(after: sourceSet) {
+      exerciseSet.weight = sourceSet.weight
+      exerciseSet.weightUnit = sourceSet.weightUnit
+    }
+  }
+
   func requiresWeightUnitUpdate(to newUnit: WeightUnit) -> Bool {
     preferredWeightUnit != newUnit
       || exerciseSets.contains { exerciseSet in

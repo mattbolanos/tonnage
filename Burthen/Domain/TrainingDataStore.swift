@@ -151,6 +151,48 @@ struct TrainingDataStore {
     }
   }
 
+  /// Commits the exercise preference and subsequent set weights together using
+  /// the existing context. Restore only this action's changes if saving fails.
+  func saveStartingWeight(from sourceSet: ExerciseSet, at date: Date = .now) throws {
+    guard let entry = sourceSet.workoutExercise,
+          let exercise = entry.exercise else {
+      throw WorkoutModelError.missingExercise
+    }
+    try Exercise.validateStartingWorkingWeight(sourceSet.weight)
+    if sourceSet.weight != nil && sourceSet.weightUnit == nil {
+      throw WorkoutModelError.missingWeightUnit
+    }
+
+    let previousWeight = exercise.startingWorkingWeight
+    let previousUnit = exercise.startingWorkingWeightUnit
+    let previousUpdatedAt = exercise.updatedAt
+    let previousWorkoutUpdatedAt = entry.workout?.updatedAt
+    let followingWeights = entry.followingSets(after: sourceSet).map {
+      (set: $0, weight: $0.weight, unit: $0.weightUnit)
+    }
+
+    do {
+      try exercise.updateStartingWorkingWeight(
+        sourceSet.weight, unit: sourceSet.weightUnit ?? entry.weightUnit, at: date
+      )
+      entry.populateFollowingSetWeights(from: sourceSet)
+      entry.workout?.updatedAt = date
+      try modelContext.save()
+    } catch {
+      exercise.startingWorkingWeight = previousWeight
+      exercise.startingWorkingWeightUnit = previousUnit
+      exercise.updatedAt = previousUpdatedAt
+      if let previousWorkoutUpdatedAt {
+        entry.workout?.updatedAt = previousWorkoutUpdatedAt
+      }
+      for previous in followingWeights {
+        previous.set.weight = previous.weight
+        previous.set.weightUnit = previous.unit
+      }
+      throw error
+    }
+  }
+
   func createTemplate(
     name: String,
     notes: String? = nil,

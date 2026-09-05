@@ -1020,6 +1020,119 @@ struct BurthenTests {
   }
 
   @Test
+  func followingSetsCanInheritWeightWithoutChangingRepetitions() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    let precedingSet = try entry.addSet(
+      reps: 12,
+      weight: 95,
+      weightUnit: .pounds
+    )
+    let sourceSet = try entry.addSet(
+      reps: 8,
+      weight: 100,
+      weightUnit: .pounds
+    )
+    let followingSet = try entry.addSet(
+      reps: 6,
+      weight: 105,
+      weightUnit: .kilograms
+    )
+
+    entry.populateFollowingSetWeights(from: sourceSet)
+
+    #expect(followingSet.reps == 6)
+    #expect(followingSet.weight == 100)
+    #expect(followingSet.weightUnit == .pounds)
+    #expect(precedingSet.reps == 12)
+    #expect(precedingSet.weight == 95)
+  }
+
+  @Test(arguments: [ExerciseOrigin.custom, .seeded])
+  func startingWeightActionPersistsPreferenceAndFollowingSets(origin: ExerciseOrigin) throws {
+    let container = try makeContainer()
+    let context = container.mainContext
+    let store = TrainingDataStore(modelContext: context)
+    let exercise = try store.createExercise(
+      name: "Starting Weight Test", loadMode: .externalResistance, origin: origin
+    )
+    let workout = try store.startWorkout()
+    let entry = try store.addExercise(exercise, to: workout)
+    let preceding = entry.orderedSets[0]
+    preceding.weight = 20
+    preceding.weightUnit = .pounds
+    let source = entry.orderedSets[1]
+    source.weight = Decimal(string: "42.5")
+    source.weightUnit = .kilograms
+    let following = entry.orderedSets[2]
+    following.reps = 6
+    let completedAt = following.completedAt
+
+    try store.saveStartingWeight(from: source)
+
+    let reloadedContext = ModelContext(container)
+    let savedExercise = try #require(
+      reloadedContext.fetch(FetchDescriptor<Exercise>()).first { $0.id == exercise.id }
+    )
+    let savedEntry = try #require(savedExercise.workoutExercises.first)
+    #expect(savedExercise.startingWorkingWeight == Decimal(string: "42.5"))
+    #expect(savedExercise.startingWorkingWeightUnit == .kilograms)
+    #expect(savedEntry.orderedSets[0].weight == 20)
+    #expect(savedEntry.orderedSets[0].weightUnit == .pounds)
+    #expect(savedEntry.orderedSets[2].weight == Decimal(string: "42.5"))
+    #expect(savedEntry.orderedSets[2].weightUnit == .kilograms)
+    #expect(savedEntry.orderedSets[2].reps == 6)
+    #expect(savedEntry.orderedSets[2].completedAt == completedAt)
+    let appended = try entry.addDraftSet()
+    #expect(appended.weight == Decimal(string: "93.5"))
+    #expect(appended.weightUnit == .pounds)
+  }
+
+  @Test
+  func startingWeightActionOnLastSetCanClearPreference() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let exercise = try store.createExercise(
+      name: "Bodyweight Test", loadMode: .bodyweight, startingWorkingWeight: 20
+    )
+    let workout = try store.startWorkout()
+    let entry = try store.addExercise(exercise, to: workout)
+    let source = try #require(entry.orderedSets.last)
+    source.weight = nil
+    source.weightUnit = nil
+
+    try store.saveStartingWeight(from: source)
+
+    let saved = try #require(ModelContext(container).fetch(FetchDescriptor<Exercise>()).first)
+    #expect(saved.startingWorkingWeight == nil)
+    #expect(saved.startingWorkingWeightUnit == nil)
+  }
+
+  @Test
+  func followingSetsExcludeTheSourceSetAndEverythingBeforeIt() throws {
+    let benchPress = try Exercise(
+      name: "Bench Press",
+      loadMode: .externalResistance
+    )
+    let workout = try Workout()
+    let entry = try workout.addExercise(benchPress)
+    let firstSet = try entry.addSet(reps: 8, weight: 95, weightUnit: .pounds)
+    let secondSet = try entry.addSet(reps: 8, weight: 100, weightUnit: .pounds)
+    let thirdSet = try entry.addSet(reps: 8, weight: 105, weightUnit: .pounds)
+    let otherEntry = try workout.addExercise(benchPress)
+    let unrelatedSet = try otherEntry.addSet(reps: 5, weight: 135, weightUnit: .pounds)
+
+    #expect(entry.followingSets(after: firstSet).map(\.id) == [secondSet.id, thirdSet.id])
+    #expect(entry.followingSets(after: secondSet).map(\.id) == [thirdSet.id])
+    #expect(entry.followingSets(after: thirdSet).isEmpty)
+    #expect(entry.followingSets(after: unrelatedSet).isEmpty)
+  }
+
+  @Test
   func activeWorkoutAllowsDuplicateExercisesAndNormalizesReordering() throws {
     let container = try makeContainer()
     let store = TrainingDataStore(modelContext: container.mainContext)

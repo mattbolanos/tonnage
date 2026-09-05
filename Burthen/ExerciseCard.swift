@@ -48,31 +48,6 @@ struct ActiveWorkoutExerciseSummary: Identifiable {
   }
 }
 
-private struct ExerciseProgressGaugeStyle: GaugeStyle {
-  @ScaledMetric(relativeTo: .body)
-  private var diameter = LayoutMetrics.Size.exerciseProgressIndicator
-
-  @ScaledMetric(relativeTo: .body)
-  private var lineWidth = LayoutMetrics.StrokeWidth.exerciseProgressIndicator
-
-  func makeBody(configuration: Configuration) -> some View {
-    ZStack {
-      Circle()
-        .stroke(.tint, lineWidth: lineWidth)
-        .opacity(0.25)
-
-      Circle()
-        .trim(from: 0, to: CGFloat(configuration.value))
-        .stroke(
-          .tint,
-          style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-        )
-        .rotationEffect(.degrees(-90))
-    }
-    .frame(width: diameter, height: diameter)
-  }
-}
-
 struct ExerciseCard: View {
   let exercise: ActiveWorkoutExerciseSummary
 
@@ -93,12 +68,9 @@ struct ExerciseCard: View {
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
-        Gauge(value: exercise.completionProgress) {
-          EmptyView()
-        }
-        .gaugeStyle(ExerciseProgressGaugeStyle())
-        .tint(.accentColor)
-        .accessibilityHidden(true)
+        CircularProgress(value: exercise.completionProgress)
+          .tint(.accentColor)
+          .accessibilityHidden(true)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .contentShape(.rect)

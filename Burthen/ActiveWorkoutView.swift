@@ -94,7 +94,7 @@ private struct ActiveWorkoutEditor: View {
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
     .background(Color(uiColor: .systemGroupedBackground))
-    .navigationTitle("Active Workout")
+    .navigationTitle(workout.displayName)
     .navigationBarTitleDisplayMode(.large)
     .navigationDestination(for: ActiveWorkoutExerciseRoute.self) { route in
       workoutExerciseDestination(for: route)
@@ -274,20 +274,17 @@ private struct ActiveWorkoutHeader: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
-      Text(workout.displayName)
-        .font(.headline)
-        .foregroundStyle(.secondary)
-
       Text(
         workout.startedAt,
         format: .dateTime
-          .weekday(.wide)
+          .weekday(.abbreviated)
           .month(.wide)
           .day()
           .hour()
           .minute()
       )
-      .font(.title3.weight(.semibold))
+      .font(.headline)
+      .foregroundStyle(.secondary)
 
       if let notes = workout.notes {
         Text(notes)
@@ -342,6 +339,8 @@ private struct WorkoutExercisePicker: View {
 
   let workout: Workout
 
+  @State private var isAddingExercise = false
+  @State private var newlyCreatedExercise: Exercise?
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
@@ -358,8 +357,14 @@ private struct WorkoutExercisePicker: View {
             .buttonStyle(.plain)
             .accessibilityHint("Adds this exercise to the active workout.")
           }
-        } footer: {
-          Text("An exercise can be added more than once.")
+        }
+        if !activeExercises.isEmpty {
+          Section {
+            Button(action: presentNewExercise) {
+              Label("New Exercise", systemImage: "plus")
+                .foregroundStyle(.pink)
+            }
+          }
         }
       }
       .overlay {
@@ -367,7 +372,12 @@ private struct WorkoutExercisePicker: View {
           ContentUnavailableView {
             ContentUnavailableLogoLabel(title: "No Exercises")
           } description: {
-            Text("Create an exercise in Settings before adding it here.")
+            Text("Create an exercise to add it to this workout.")
+          } actions: {
+            Button("New Exercise", systemImage: "plus", action: presentNewExercise)
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+              .tint(.pink)
           }
         }
       }
@@ -378,12 +388,27 @@ private struct WorkoutExercisePicker: View {
           Button("Cancel", action: dismiss.callAsFunction)
         }
       }
+      .sheet(isPresented: $isAddingExercise, onDismiss: addNewlyCreatedExercise) {
+        AddExerciseView { exercise in
+          newlyCreatedExercise = exercise
+        }
+      }
       .alert("Exercise Couldn’t Be Added", isPresented: $isShowingError) {
         Button("OK", role: .cancel) {}
       } message: {
         Text(errorMessage)
       }
     }
+  }
+
+  private func presentNewExercise() {
+    isAddingExercise = true
+  }
+
+  private func addNewlyCreatedExercise() {
+    guard let exercise = newlyCreatedExercise else { return }
+    newlyCreatedExercise = nil
+    add(exercise)
   }
 
   private func add(_ exercise: Exercise) {

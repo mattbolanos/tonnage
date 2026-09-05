@@ -31,15 +31,18 @@ enum LayoutMetrics {
 
   enum Size {
     static let contentUnavailableLogoWidth: CGFloat = 64
-    static let exerciseProgressIndicator: CGFloat = 24
+    static let circularProgress: CGFloat = 24
     static let setNumberColumn = Spacing.large
     static let workoutRowContentHeight: CGFloat = 44
     static let resumeWorkoutButton = workoutRowContentHeight
     static let setCompletionControl = workoutRowContentHeight
+    /// Trims the wheel picker's near-invisible fade rows so the controls
+    /// beneath it sit close to the value they modify.
+    static let wheelPicker: CGFloat = 176
   }
 
   enum StrokeWidth {
-    static let exerciseProgressIndicator: CGFloat = 6
+    static let circularProgress: CGFloat = 6
   }
 
   enum Insets {

@@ -16,6 +16,7 @@ struct ActiveWorkoutExerciseView: View {
   // NavigationLink may initialize this destination while deleting its source row.
   // Defer SwiftData reads until the destination appears so the model is still attached.
   @State private var weightUnit = WeightUnit.pounds
+  @State private var setDisplayMode = ExerciseSetDisplayMode.repetitionsAndWeight
   @State private var isShowingError = false
   @State private var errorMessage = ""
   @State private var selectedSet: ExerciseSet?
@@ -33,24 +34,6 @@ struct ActiveWorkoutExerciseView: View {
 
     List {
       Section {
-        Picker("Weight Unit", selection: $weightUnit) {
-          ForEach(WeightUnit.allCases, id: \.self) { unit in
-            Text(unit.displayAbbreviation)
-              .tag(unit)
-          }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .onChange(of: weightUnit, updateWeightUnit)
-      }
-      .listSectionMargins(
-        .horizontal,
-        LayoutMetrics.Padding.horizontalContent
-      )
-
-      Section {
         ForEach(
           Array(orderedSets.enumerated()),
           id: \.element.id
@@ -60,6 +43,7 @@ struct ActiveWorkoutExerciseView: View {
             setNumber: index + 1,
             weightUnit: weightUnit,
             requiresWeight: requiresWeight,
+            displayMode: setDisplayMode,
             canDelete: orderedSets.count > 1,
             edit: editSet,
             setCompletion: setCompletion,
@@ -105,10 +89,38 @@ struct ActiveWorkoutExerciseView: View {
     .navigationBarTitleDisplayMode(.large)
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
+        Menu("Exercise Options", systemImage: "ellipsis") {
+          Section("Set Display") {
+            Picker("Set Display", selection: $setDisplayMode) {
+              Text("Reps × Weight")
+                .tag(ExerciseSetDisplayMode.repetitionsAndWeight)
+              Text("Set Load")
+                .tag(ExerciseSetDisplayMode.setLoad)
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+          }
+
+          Section("Weight Unit") {
+            Picker("Weight Unit", selection: $weightUnit) {
+              Text("Pounds (lbs)")
+                .tag(WeightUnit.pounds)
+              Text("Kilograms (kgs)")
+                .tag(WeightUnit.kilograms)
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+          }
+        }
+        .labelStyle(.iconOnly)
+      }
+
+      ToolbarItem(placement: .topBarTrailing) {
         EditButton()
       }
     }
     .onAppear(perform: prepareWeightUnit)
+    .onChange(of: weightUnit, updateWeightUnit)
     .sheet(item: $selectedSet) { exerciseSet in
       ExerciseSetPicker(
         exerciseSet: exerciseSet,
