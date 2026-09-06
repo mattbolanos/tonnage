@@ -73,7 +73,7 @@ struct ExerciseCard: View {
         Spacer(minLength: LayoutMetrics.Spacing.small)
 
         CircularProgress(value: exercise.completionProgress)
-          .tint(.accentColor)
+          .tint(.pink)
           .accessibilityHidden(true)
       }
       .frame(maxWidth: .infinity, alignment: .leading)

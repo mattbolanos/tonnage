@@ -169,7 +169,7 @@ private struct BlankWorkoutActions: View {
   let startWorkout: () -> Void
 
   var body: some View {
-    VStack(spacing: LayoutMetrics.Spacing.small) {
+    VStack(spacing: LayoutMetrics.Spacing.large) {
       Button(action: startWorkout) {
         Text("Start Workout")
           .font(.headline)
@@ -187,8 +187,10 @@ private struct BlankWorkoutActions: View {
         )
         .frame(maxWidth: .infinity)
       }
-      .buttonStyle(.borderless)
+      .buttonStyle(.bordered)
       .controlSize(.large)
+      .tint(.gray)
+      .foregroundStyle(.primary)
       .accessibilityHint(
         "Creates a reusable template from these exercises."
       )

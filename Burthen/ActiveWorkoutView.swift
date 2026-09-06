@@ -81,6 +81,7 @@ private struct ActiveWorkoutEditor: View {
         Button(action: finishWorkout) {
           Label("Finish Workout", systemImage: "checkmark")
             .font(.headline)
+            .foregroundStyle(workout.isCompletable ? Color.white : Color.secondary)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.glassProminent)
@@ -95,9 +96,8 @@ private struct ActiveWorkoutEditor: View {
             ? "Saves completed sets and opens your workout summary."
             : "Complete a set to finish this workout."
         )
-      } footer: {
-        WorkoutFinishExplanation(summary: WorkoutCompletionSummary(workout: workout))
       }
+      .listSectionSeparator(.hidden)
     }
     .listStyle(.plain)
     .scrollContentBackground(.hidden)

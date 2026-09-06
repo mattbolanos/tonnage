@@ -139,6 +139,7 @@ final class WorkoutFlowUITests: XCTestCase {
     XCTAssertTrue(app.staticTexts["Library Press"].waitForExistence(timeout: 3))
     XCTAssertTrue(app.staticTexts["Library Row"].exists)
 
+    capture(app, named: "Blank workout actions")
     app.buttons["Save as Template"].tap()
     XCTAssertTrue(app.navigationBars["New Template"].waitForExistence(timeout: 3))
     XCTAssertTrue(app.staticTexts["Library Press"].exists)
@@ -158,7 +159,7 @@ final class WorkoutFlowUITests: XCTestCase {
   }
 
   @MainActor
-  func testPartialWorkoutExplainsWhatAppearsInTheSummary() throws {
+  func testPartialWorkoutSummaryIncludesOnlyCompletedWork() throws {
     XCUIDevice.shared.orientation = .portrait
     let app = XCUIApplication()
     app.launchArguments = ["--ui-testing"]
@@ -180,11 +181,7 @@ final class WorkoutFlowUITests: XCTestCase {
     app.staticTexts["Completed Press"].tap()
     app.buttons["Complete Set"].firstMatch.tap()
     app.navigationBars["Completed Press"].buttons.element(boundBy: 0).tap()
-    let explanation = app.descendants(matching: .any)["workout-finish-explanation"]
-    XCTAssertTrue(explanation.waitForExistence(timeout: 3))
-    XCTAssertTrue(explanation.label.contains("1 completed set"))
-    XCTAssertTrue(explanation.label.contains("won’t appear in the summary"))
-    capture(app, named: "Finish explains unfinished work")
+    capture(app, named: "Finish partial workout")
     app.buttons["Finish Workout"].tap()
 
     XCTAssertTrue(app.navigationBars["Workout Summary"].waitForExistence(timeout: 5))
