@@ -11,6 +11,7 @@ enum ExerciseSetDisplayMode: Hashable {
 }
 
 struct ExerciseSetEditorRow: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ScaledMetric(relativeTo: .body)
   private var setNumberColumnWidth = LayoutMetrics.Size.setNumberColumn
 
@@ -74,13 +75,14 @@ struct ExerciseSetEditorRow: View {
           .foregroundStyle(
             exerciseSet.isCompleted ? Color.accentColor : Color.secondary
           )
-          .contentTransition(.symbolEffect(.replace))
+          .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+          .frame(
+            width: LayoutMetrics.Size.setCompletionControl,
+            height: LayoutMetrics.Size.setCompletionControl
+          )
+          .contentShape(.rect)
       }
       .buttonStyle(.plain)
-      .frame(
-        width: LayoutMetrics.Size.setCompletionControl,
-        height: LayoutMetrics.Size.setCompletionControl
-      )
       .accessibilityHint(
         exerciseSet.isCompleted
           ? "Removes this set from training load."

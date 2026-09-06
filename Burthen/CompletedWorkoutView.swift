@@ -7,6 +7,9 @@ import SwiftUI
 
 struct CompletedWorkoutView: View {
   let workout: Workout
+  var showsCompletion = false
+
+  @State private var templateSeed: WorkoutTemplateSeed?
 
   var body: some View {
     let orderedExercises = workout.orderedExercises.filter { workoutExercise in
@@ -14,7 +17,19 @@ struct CompletedWorkoutView: View {
     }
 
     List {
-      CompletedWorkoutHeader(workout: workout)
+      CompletedWorkoutHeader(workout: workout, showsCompletion: showsCompletion)
+
+      if showsCompletion {
+        Button(
+          "Save as Template",
+          systemImage: "rectangle.stack.badge.plus",
+          action: presentTemplateEditor
+        )
+        .disabled(workout.templateExercisePlans.isEmpty)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .accessibilityHint("Creates a reusable template from this workout’s exercises.")
+      }
 
       if orderedExercises.isEmpty {
         ContentUnavailableView {
@@ -38,5 +53,12 @@ struct CompletedWorkoutView: View {
     .background(Color(uiColor: .systemGroupedBackground))
     .navigationTitle("Workout Summary")
     .navigationBarTitleDisplayMode(.large)
+    .sheet(item: $templateSeed) { seed in
+      AddWorkoutTemplateView(seed: seed)
+    }
+  }
+
+  private func presentTemplateEditor() {
+    templateSeed = WorkoutTemplateSeed(workout: workout)
   }
 }

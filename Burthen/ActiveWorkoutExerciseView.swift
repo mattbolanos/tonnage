@@ -7,11 +7,14 @@ import SwiftData
 import SwiftUI
 
 struct ActiveWorkoutExerciseView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.modelContext) private var modelContext
   @ScaledMetric(relativeTo: .body)
   private var setNumberColumnWidth = LayoutMetrics.Size.setNumberColumn
 
   let workoutExercise: WorkoutExercise
+  let onNextExercise: (UUID) -> Void
+  let onReturnToWorkout: () -> Void
 
   // NavigationLink may initialize this destination while deleting its source row.
   // Defer SwiftData reads until the destination appears so the model is still attached.
@@ -20,6 +23,7 @@ struct ActiveWorkoutExerciseView: View {
   @State private var isShowingError = false
   @State private var errorMessage = ""
   @State private var selectedSet: ExerciseSet?
+  @State private var completedSetFeedbackCount = 0
 
   private var exerciseName: String {
     workoutExercise.exercise?.name ?? "Unavailable Exercise"
@@ -31,6 +35,7 @@ struct ActiveWorkoutExerciseView: View {
 
   var body: some View {
     let orderedSets = workoutExercise.orderedSets
+    let progression = ActiveWorkoutProgression.afterCompleting(workoutExercise)
 
     List {
       Section {
@@ -78,6 +83,23 @@ struct ActiveWorkoutExerciseView: View {
         .horizontal,
         LayoutMetrics.Padding.horizontalContent
       )
+
+      if let progression {
+        Section {
+          WorkoutExerciseContinuation(
+            progression: progression,
+            onNextExercise: onNextExercise,
+            onReturnToWorkout: onReturnToWorkout
+          )
+          .listRowBackground(Color.clear)
+        } header: {
+          SectionHeader("Working Sets Complete")
+        }
+        .listSectionMargins(
+          .horizontal,
+          LayoutMetrics.Padding.horizontalContent
+        )
+      }
     }
     .contentMargins(
       .top,
@@ -85,6 +107,7 @@ struct ActiveWorkoutExerciseView: View {
       for: .scrollContent
     )
     .listSectionSpacing(.compact)
+    .animation(reduceMotion ? nil : .smooth, value: progression)
     .navigationTitle(exerciseName)
     .navigationBarTitleDisplayMode(.large)
     .toolbar {
@@ -121,6 +144,7 @@ struct ActiveWorkoutExerciseView: View {
     }
     .onAppear(perform: prepareWeightUnit)
     .onChange(of: weightUnit, updateWeightUnit)
+    .sensoryFeedback(.success, trigger: completedSetFeedbackCount)
     .sheet(item: $selectedSet) { exerciseSet in
       ExerciseSetPicker(
         exerciseSet: exerciseSet,
@@ -178,11 +202,16 @@ struct ActiveWorkoutExerciseView: View {
   }
 
   private func setCompletion(_ isCompleted: Bool, for exerciseSet: ExerciseSet) {
-    performUpdate {
+    let wasCompleted = exerciseSet.isCompleted
+    let didSave = performUpdate {
       try TrainingDataStore(modelContext: modelContext).setCompletion(
         isCompleted,
         for: exerciseSet
       )
+    }
+
+    if didSave && isCompleted && !wasCompleted {
+      completedSetFeedbackCount += 1
     }
   }
 
@@ -198,13 +227,17 @@ struct ActiveWorkoutExerciseView: View {
     }
   }
 
-  private func performUpdate(_ update: () throws -> Void) {
+  @discardableResult
+  private func performUpdate(_ update: () throws -> Void) -> Bool {
     do {
       try update()
       try modelContext.save()
+      return true
     } catch {
+      modelContext.rollback()
       errorMessage = activeWorkoutErrorMessage(for: error)
       isShowingError = true
+      return false
     }
   }
 }

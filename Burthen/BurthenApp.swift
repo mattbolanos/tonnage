@@ -11,9 +11,15 @@ import SwiftUI
 @main
 struct BurthenApp: App {
   private let modelContainer: ModelContainer = {
+    #if DEBUG
+    let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+    #else
+    let isUITesting = false
+    #endif
+
     let configuration = ModelConfiguration(
       schema: BurthenSchema.schema,
-      isStoredInMemoryOnly: false
+      isStoredInMemoryOnly: isUITesting
     )
 
     do {

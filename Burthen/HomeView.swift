@@ -106,9 +106,12 @@ struct HomeView: View {
           BlankWorkoutView()
         case .templates:
           WorkoutTemplatePickerView()
-        case .completedWorkout(let workoutID):
+        case .completedWorkout(let workoutID), .finishedWorkout(let workoutID):
           if let workout = workouts.first(where: { $0.id == workoutID }) {
-            CompletedWorkoutView(workout: workout)
+            CompletedWorkoutView(
+              workout: workout,
+              showsCompletion: route == .finishedWorkout(workoutID)
+            )
           } else {
             ContentUnavailableView {
               ContentUnavailableLogoLabel(title: "Workout Unavailable")

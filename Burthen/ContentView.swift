@@ -14,6 +14,7 @@ struct ContentView: View {
 
   @State private var selection = AppTab.home
   @State private var homeNavigationPath: [HomeRoute] = []
+  @State private var lastCompletedWorkoutID: UUID?
 
   private var activeWorkout: Workout? {
     workouts.first { $0.status == .inProgress }
@@ -35,6 +36,7 @@ struct ContentView: View {
         Tab("Workout", image: "BurthenLogo", value: AppTab.activeWorkout) {
           ActiveWorkoutView(
             workout: activeWorkout,
+            onComplete: showFinishedWorkout,
             onDiscard: showHome
           )
             .tint(nil)
@@ -56,6 +58,7 @@ struct ContentView: View {
       }
     }
     .tint(.pink)
+    .sensoryFeedback(.success, trigger: lastCompletedWorkoutID)
     .onChange(
       of: activeWorkout?.id,
       initial: true,
@@ -72,8 +75,14 @@ struct ContentView: View {
     if newID != nil {
       selection = .activeWorkout
     } else if selection == .activeWorkout {
-      showHome()
+      selection = .home
     }
+  }
+
+  private func showFinishedWorkout(_ workout: Workout) {
+    selection = .home
+    homeNavigationPath = [.finishedWorkout(workout.id)]
+    lastCompletedWorkoutID = workout.id
   }
 
   private func showActiveWorkout() {

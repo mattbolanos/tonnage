@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct CircularProgress: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let value: Double
 
   @ScaledMetric(relativeTo: .body)
@@ -31,6 +33,7 @@ struct CircularProgress: View {
           style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
         )
         .rotationEffect(.degrees(-90))
+        .animation(reduceMotion ? nil : .smooth, value: progress)
     }
     .frame(width: diameter, height: diameter)
   }

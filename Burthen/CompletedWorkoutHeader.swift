@@ -7,9 +7,20 @@ import SwiftUI
 
 struct CompletedWorkoutHeader: View {
   let workout: Workout
+  var showsCompletion = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
+      if showsCompletion {
+        Label("Workout Complete", systemImage: "checkmark.circle.fill")
+          .font(.headline)
+          .foregroundStyle(.tint)
+
+        Text("^[\(completedSetCount) set](inflect: true) completed")
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+      }
+
       Text(workout.displayName)
         .font(.headline)
         .foregroundStyle(.secondary)
@@ -38,5 +49,11 @@ struct CompletedWorkoutHeader: View {
     .listRowSeparator(.hidden)
     .listRowBackground(Color.clear)
     .accessibilityElement(children: .combine)
+  }
+
+  private var completedSetCount: Int {
+    workout.workoutExercises.reduce(0) { count, exercise in
+      count + exercise.exerciseSets.count { $0.isCompleted }
+    }
   }
 }

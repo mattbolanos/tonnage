@@ -25,6 +25,7 @@ final class BurthenUITests: XCTestCase {
     @MainActor
     func testCanOpenExerciseManagementFromSettings() throws {
         let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
         let exerciseName = "UI Exercise \(UUID().uuidString.prefix(8))"
         app.launch()
 
@@ -41,7 +42,7 @@ final class BurthenUITests: XCTestCase {
         XCTAssertTrue(nameField.exists)
         nameField.tap()
         nameField.typeText(exerciseName)
-        app.navigationBars["New Exercise"].buttons["Add"].tap()
+        app.navigationBars["New Exercise"].buttons["Create"].tap()
 
         XCTAssertTrue(app.staticTexts[exerciseName].waitForExistence(timeout: 2))
         app.staticTexts[exerciseName].tap()
@@ -52,9 +53,11 @@ final class BurthenUITests: XCTestCase {
 
     @MainActor
     func testLaunchPerformance() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
         // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+            app.launch()
         }
     }
 }

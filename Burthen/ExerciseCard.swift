@@ -49,6 +49,8 @@ struct ActiveWorkoutExerciseSummary: Identifiable {
 }
 
 struct ExerciseCard: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let exercise: ActiveWorkoutExerciseSummary
 
   var body: some View {
@@ -64,6 +66,8 @@ struct ExerciseCard: View {
           Text(exercise.setCountLabel)
             .font(.caption)
             .foregroundStyle(.secondary)
+            .contentTransition(reduceMotion ? .identity : .numericText())
+            .animation(reduceMotion ? nil : .smooth, value: exercise.completedSetCount)
         }
 
         Spacer(minLength: LayoutMetrics.Spacing.small)
