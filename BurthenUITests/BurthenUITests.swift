@@ -23,13 +23,13 @@ final class BurthenUITests: XCTestCase {
     }
 
     @MainActor
-    func testCanOpenExerciseManagementFromSettings() throws {
+    func testCanOpenExerciseManagementFromLibrary() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         let exerciseName = "UI Exercise \(UUID().uuidString.prefix(8))"
         app.launch()
 
-        app.tabBars.buttons["Settings"].tap()
+        app.tabBars.buttons["Library"].tap()
         app.staticTexts["Exercises"].tap()
 
         XCTAssertTrue(app.navigationBars["Exercises"].waitForExistence(timeout: 2))

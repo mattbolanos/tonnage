@@ -40,12 +40,18 @@ struct CompletedWorkoutView: View {
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
       } else {
-        ForEach(orderedExercises) { workoutExercise in
-          CompletedWorkoutExerciseCard(workoutExercise: workoutExercise)
-            .listRowInsets(LayoutMetrics.Insets.cardRow)
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+        Section("Exercises") {
+          ForEach(orderedExercises) { workoutExercise in
+            CompletedWorkoutExerciseCard(workoutExercise: workoutExercise)
+              .listRowInsets(LayoutMetrics.Insets.cardRow)
+              .listRowSeparator(.hidden)
+              .listRowBackground(Color.clear)
+          }
         }
+      }
+
+      Section {
+        CompletedWorkoutVolumeDetails(workout: workout)
       }
     }
     .listStyle(.plain)

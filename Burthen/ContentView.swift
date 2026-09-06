@@ -14,6 +14,8 @@ struct ContentView: View {
 
   @State private var selection = AppTab.home
   @State private var homeNavigationPath: [HomeRoute] = []
+  @State private var activeWorkoutNavigationPath: [ActiveWorkoutExerciseRoute] = []
+  @State private var presentedWorkout: Workout?
   @State private var lastCompletedWorkoutID: UUID?
 
   private var activeWorkout: Workout? {
@@ -32,32 +34,45 @@ struct ContentView: View {
 
   var body: some View {
     TabView(selection: $selection) {
-      if let activeWorkout {
-        Tab("Workout", image: "BurthenLogo", value: AppTab.activeWorkout) {
-          ActiveWorkoutView(
-            workout: activeWorkout,
-            onComplete: showFinishedWorkout,
-            onDiscard: showHome
-          )
-            .tint(nil)
-        }
-      }
-
       Tab("Home", systemImage: "house", value: AppTab.home) {
         HomeView(
           navigationPath: $homeNavigationPath,
           workouts: workouts,
           resumeActiveWorkout: showActiveWorkout
         )
-          .tint(nil)
+        .tint(nil)
+        .modifier(
+          ActiveWorkoutAccessoryInset(
+            workout: activeWorkout,
+            resume: showActiveWorkout
+          )
+        )
       }
 
-      Tab("Settings", systemImage: "gearshape", value: AppTab.settings) {
-        SettingsView()
+      Tab("Library", systemImage: "books.vertical", value: AppTab.library) {
+        LibraryView()
           .tint(nil)
+          .modifier(
+            ActiveWorkoutAccessoryInset(
+              workout: activeWorkout,
+              resume: showActiveWorkout
+            )
+          )
       }
     }
     .tint(.pink)
+    .sheet(item: $presentedWorkout) { workout in
+      ActiveWorkoutView(
+        workout: workout,
+        navigationPath: $activeWorkoutNavigationPath,
+        onComplete: showFinishedWorkout,
+        onDiscard: showHome,
+        onMinimize: minimizeWorkout
+      )
+      .tint(nil)
+      .presentationDetents([.large])
+      .presentationDragIndicator(.visible)
+    }
     .sensoryFeedback(.success, trigger: lastCompletedWorkoutID)
     .onChange(
       of: activeWorkout?.id,
@@ -73,33 +88,34 @@ struct ContentView: View {
 
   private func activeWorkoutDidChange(_: UUID?, _ newID: UUID?) {
     if newID != nil {
-      selection = .activeWorkout
-    } else if selection == .activeWorkout {
-      selection = .home
+      activeWorkoutNavigationPath.removeAll()
+      homeNavigationPath.removeAll()
+      showActiveWorkout()
+    } else {
+      minimizeWorkout()
     }
   }
 
   private func showFinishedWorkout(_ workout: Workout) {
+    minimizeWorkout()
     selection = .home
     homeNavigationPath = [.finishedWorkout(workout.id)]
     lastCompletedWorkoutID = workout.id
   }
 
   private func showActiveWorkout() {
-    guard activeWorkout != nil else { return }
-    selection = .activeWorkout
+    presentedWorkout = activeWorkout
+  }
+
+  private func minimizeWorkout() {
+    presentedWorkout = nil
   }
 
   private func showHome() {
+    minimizeWorkout()
     homeNavigationPath.removeAll()
     selection = .home
   }
-}
-
-private enum AppTab: Hashable {
-  case activeWorkout
-  case home
-  case settings
 }
 
 #Preview {

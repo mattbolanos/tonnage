@@ -9,6 +9,9 @@ import SwiftUI
 struct BlankWorkoutView: View {
   @Environment(\.modelContext) private var modelContext
 
+  @Query(filter: #Predicate<Exercise> { !$0.isArchived })
+  private var libraryExercises: [Exercise]
+
   @State private var exercises: [BlankWorkoutExerciseDraft] = []
   @State private var presentedSheet: BlankWorkoutSheet?
   @State private var isShowingError = false
@@ -49,6 +52,7 @@ struct BlankWorkoutView: View {
     .overlay {
       if exercises.isEmpty {
         BlankWorkoutEmptyState(
+          hasLibraryExercises: !libraryExercises.isEmpty,
           createExercise: addExercise,
           chooseExercises: selectExercises
         )
@@ -72,7 +76,10 @@ struct BlankWorkoutView: View {
     .sheet(item: $presentedSheet) { sheet in
       switch sheet {
       case .exercisePicker:
-        BlankWorkoutExercisePicker(exercises: $exercises)
+        ExercisePickerView(
+          existingExerciseIDs: Set(exercises.map { $0.exercise.id }),
+          onAdd: appendExercises
+        )
       case .newExercise:
         AddExerciseView(onAdd: appendExercise)
       case .template(let seed):
@@ -96,6 +103,12 @@ struct BlankWorkoutView: View {
 
   private func appendExercise(_ exercise: Exercise) {
     exercises.append(BlankWorkoutExerciseDraft(exercise: exercise))
+  }
+
+  private func appendExercises(_ selectedExercises: [Exercise]) {
+    exercises.append(contentsOf: selectedExercises.map {
+      BlankWorkoutExerciseDraft(exercise: $0)
+    })
   }
 
   private func removeExercises(at offsets: IndexSet) {
@@ -157,19 +170,6 @@ private struct BlankWorkoutActions: View {
 
   var body: some View {
     VStack(spacing: LayoutMetrics.Spacing.small) {
-      Button(action: saveTemplate) {
-        Label(
-          "Save as Template",
-          systemImage: "rectangle.stack.badge.plus"
-        )
-        .frame(maxWidth: .infinity)
-      }
-      .buttonStyle(.glass)
-      .controlSize(.large)
-      .accessibilityHint(
-        "Creates a reusable template from these exercises."
-      )
-
       Button(action: startWorkout) {
         Text("Start Workout")
           .font(.headline)
@@ -177,218 +177,56 @@ private struct BlankWorkoutActions: View {
       }
       .buttonStyle(.glassProminent)
       .controlSize(.large)
+      .tint(.pink)
       .accessibilityHint("Starts a workout with these exercises.")
+
+      Button(action: saveTemplate) {
+        Label(
+          "Save as Template",
+          systemImage: "rectangle.stack.badge.plus"
+        )
+        .frame(maxWidth: .infinity)
+      }
+      .buttonStyle(.borderless)
+      .controlSize(.large)
+      .accessibilityHint(
+        "Creates a reusable template from these exercises."
+      )
     }
   }
 }
 
 private struct BlankWorkoutEmptyState: View {
+  let hasLibraryExercises: Bool
   let createExercise: () -> Void
   let chooseExercises: () -> Void
 
   var body: some View {
     ContentUnavailableView {
-      ContentUnavailableLogoLabel(title: "No Exercises Yet")
+      ContentUnavailableLogoLabel(
+        title: hasLibraryExercises ? "Choose Your Exercises" : "Add Your First Exercise"
+      )
     } description: {
-      Text("Create a new exercise or add existing ones from your library.")
+      Text(
+        hasLibraryExercises
+          ? "Add exercises from your library to build this workout."
+          : "Create an exercise to start building your workout."
+      )
     } actions: {
-      ViewThatFits(in: .horizontal) {
-        HStack(spacing: LayoutMetrics.Spacing.small) {
-          Button("New Exercise", action: createExercise)
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(.pink)
-            .fixedSize(horizontal: true, vertical: false)
+      Button(
+        hasLibraryExercises ? "Add Exercises" : "New Exercise",
+        systemImage: "plus",
+        action: hasLibraryExercises ? chooseExercises : createExercise
+      )
+      .buttonStyle(.borderedProminent)
+      .controlSize(.large)
+      .tint(.pink)
 
-          Button("Add Existing", action: chooseExercises)
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .fixedSize(horizontal: true, vertical: false)
-        }
-
-        VStack(spacing: LayoutMetrics.Spacing.small) {
-          Button(action: createExercise) {
-            Text("New Exercise")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.borderedProminent)
+      if hasLibraryExercises {
+        Button("New Exercise", action: createExercise)
           .controlSize(.large)
-          .tint(.pink)
-
-          Button(action: chooseExercises) {
-            Text("Add Existing")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.bordered)
-          .controlSize(.large)
-        }
       }
     }
-  }
-}
-
-private struct BlankWorkoutExercisePicker: View {
-  @Environment(\.dismiss) private var dismiss
-
-  @Query(
-    filter: #Predicate<Exercise> { !$0.isArchived },
-    sort: \Exercise.name
-  )
-  private var activeExercises: [Exercise]
-
-  @Binding var exercises: [BlankWorkoutExerciseDraft]
-  @State private var selectedExerciseIDs: Set<UUID> = []
-  @State private var searchText = ""
-  @State private var isAddingExercise = false
-
-  private var existingExerciseIDs: Set<UUID> {
-    Set(exercises.map { $0.exercise.id })
-  }
-
-  private var filteredExercises: [Exercise] {
-    guard !searchText.isEmpty else { return activeExercises }
-    return activeExercises.filter { exercise in
-      exercise.name.localizedStandardContains(searchText)
-    }
-  }
-
-  var body: some View {
-    NavigationStack {
-      List {
-        if !filteredExercises.isEmpty {
-          Section {
-            Button(
-              "New Exercise",
-              systemImage: "plus",
-              action: addExercise
-            )
-          }
-
-          Section {
-            ForEach(filteredExercises) { exercise in
-              Button {
-                toggleSelection(of: exercise)
-              } label: {
-                BlankWorkoutExercisePickerRow(
-                  exercise: exercise,
-                  isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
-                  isSelected: selectedExerciseIDs.contains(exercise.id)
-                )
-              }
-              .buttonStyle(.plain)
-              .disabled(existingExerciseIDs.contains(exercise.id))
-              .accessibilityValue(accessibilityValue(for: exercise))
-            }
-          }
-        }
-      }
-      .overlay {
-        if activeExercises.isEmpty {
-          ContentUnavailableView {
-            ContentUnavailableLogoLabel(title: "No Exercises")
-          } description: {
-            Text("Create an exercise to add it to this workout.")
-          } actions: {
-            Button("New Exercise", systemImage: "plus", action: addExercise)
-              .buttonStyle(.borderedProminent)
-              .controlSize(.large)
-              .tint(.pink)
-          }
-        } else if filteredExercises.isEmpty {
-          ContentUnavailableView {
-            Label("No Results", systemImage: "magnifyingglass")
-          } description: {
-            Text("No exercises match “\(searchText)”.")
-          } actions: {
-            Button("New Exercise", systemImage: "plus", action: addExercise)
-              .buttonStyle(.borderedProminent)
-              .controlSize(.large)
-              .tint(.pink)
-          }
-        }
-      }
-      .searchable(text: $searchText, prompt: "Search Exercises")
-      .navigationTitle("Exercises")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel", action: dismiss.callAsFunction)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Add", action: addSelectedExercises)
-            .disabled(selectedExerciseIDs.isEmpty)
-        }
-      }
-      .sheet(isPresented: $isAddingExercise) {
-        AddExerciseView(onAdd: selectNewExercise)
-      }
-    }
-  }
-
-  private func accessibilityValue(for exercise: Exercise) -> String {
-    if existingExerciseIDs.contains(exercise.id) {
-      "Already added"
-    } else if selectedExerciseIDs.contains(exercise.id) {
-      "Selected"
-    } else {
-      "Not selected"
-    }
-  }
-
-  private func addExercise() {
-    isAddingExercise = true
-  }
-
-  private func selectNewExercise(_ exercise: Exercise) {
-    searchText = ""
-    selectedExerciseIDs.insert(exercise.id)
-  }
-
-  private func toggleSelection(of exercise: Exercise) {
-    if selectedExerciseIDs.contains(exercise.id) {
-      selectedExerciseIDs.remove(exercise.id)
-    } else {
-      selectedExerciseIDs.insert(exercise.id)
-    }
-  }
-
-  private func addSelectedExercises() {
-    for exercise in activeExercises where selectedExerciseIDs.contains(exercise.id) {
-      exercises.append(BlankWorkoutExerciseDraft(exercise: exercise))
-    }
-    dismiss()
-  }
-}
-
-private struct BlankWorkoutExercisePickerRow: View {
-  let exercise: Exercise
-  let isAlreadyAdded: Bool
-  let isSelected: Bool
-
-  var body: some View {
-    HStack {
-      BlankWorkoutExerciseRow(exercise: exercise)
-
-      Spacer()
-
-      if isAlreadyAdded {
-        Image(systemName: "checkmark.circle.fill")
-          .font(.title3)
-          .foregroundStyle(.secondary)
-          .accessibilityHidden(true)
-      } else if isSelected {
-        Image(systemName: "checkmark.circle.fill")
-          .font(.title3)
-          .foregroundStyle(.tint)
-          .accessibilityHidden(true)
-      } else {
-        Image(systemName: "circle")
-          .font(.title3)
-          .foregroundStyle(.tertiary)
-          .accessibilityHidden(true)
-      }
-    }
-    .contentShape(.rect)
   }
 }
 

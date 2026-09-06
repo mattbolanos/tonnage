@@ -23,22 +23,20 @@ struct CompletedWorkoutSetRow: View {
           alignment: .leading
         )
 
-      setSummary
-        .font(.subheadline.weight(.semibold))
-        .monospacedDigit()
-        .foregroundStyle(.primary)
+      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
+        setSummary
+          .font(.subheadline.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.primary)
+
+        if exerciseSet.kind == .warmup {
+          Text("Warm-up")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+      }
 
       Spacer(minLength: LayoutMetrics.Spacing.small)
-
-      if exerciseSet.kind == .warmup {
-        Text("Warm-up")
-          .font(.subheadline.weight(.medium))
-          .foregroundStyle(.orange)
-          .lineLimit(1)
-      } else {
-        TrainingLoadText(load: exerciseSet.volumeLoad, emphasis: .standard)
-          .font(.subheadline)
-      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .ignore)
@@ -53,22 +51,15 @@ struct CompletedWorkoutSetRow: View {
 
     let weightUnit = exerciseSet.weightUnit ?? .pounds
     return Text(
-      "\(exerciseSet.reps) x \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
+      "\(exerciseSet.reps) × \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
     )
   }
 
   private var accessibilityValue: String {
     let setKind = exerciseSet.kind == .warmup ? "Warm-up" : "Working"
     let repetitions = "\(exerciseSet.reps) repetitions"
-    let loadDescription =
-      switch exerciseSet.volumeLoad {
-      case .some(let load): "training load \(load.accessibilityText)"
-      case nil where exerciseSet.kind == .warmup: "excluded from training load"
-      case nil: "training load not available"
-      }
-
     guard let weight = exerciseSet.weight else {
-      return "\(setKind), \(repetitions), \(loadDescription)"
+      return "\(setKind), \(repetitions)"
     }
 
     let weightUnit = exerciseSet.weightUnit ?? .pounds
@@ -76,6 +67,6 @@ struct CompletedWorkoutSetRow: View {
       .number.precision(.fractionLength(0...1))
     )
     return
-      "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName), \(loadDescription)"
+      "\(setKind), \(repetitions) at \(formattedWeight) \(weightUnit.spokenName)"
   }
 }

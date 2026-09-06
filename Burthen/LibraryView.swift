@@ -1,12 +1,12 @@
 //
-//  SettingsView.swift
+//  LibraryView.swift
 //  Burthen
 //
 
 import SwiftData
 import SwiftUI
 
-struct SettingsView: View {
+struct LibraryView: View {
   var body: some View {
     NavigationStack {
       Form {
@@ -24,12 +24,12 @@ struct SettingsView: View {
           }
         }
       }
-      .navigationTitle("Settings")
+      .navigationTitle("Library")
     }
   }
 }
 
 #Preview {
-  SettingsView()
+  LibraryView()
     .modelContainer(for: BurthenSchema.models, inMemory: true)
 }
