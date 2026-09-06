@@ -13,6 +13,52 @@ import Testing
 @MainActor
 struct BurthenTests {
   @Test
+  func perSideLoadCountsBothSidesWithoutChangingLoggedRepsOrSets() throws {
+    let row = try Exercise(name: "Single-arm row", loadMode: .externalResistance, repetitionMode: .perSide)
+    let workout = try Workout()
+    let entry = try workout.addExercise(row)
+    let set = try entry.addSet(reps: 10, weight: 20, weightUnit: .kilograms)
+
+    #expect(set.reps == 10)
+    #expect(entry.exerciseSets.count == 1)
+    #expect(set.volumeLoad == VolumeLoad(value: 400, unit: .kilograms))
+    #expect(workout.volumeLoad(in: .kilograms)?.value == 400)
+
+    // The active set preview uses the same calculation even before completion.
+    set.completedAt = nil
+    #expect(set.volumeLoad == nil)
+    #expect(workout.volumeLoad == nil)
+    #expect(VolumeLoad.forSet(
+      kind: set.kind, repetitions: set.reps, repetitionMode: set.repetitionMode,
+      weight: set.weight, unit: set.weightUnit
+    )?.value == 400)
+  }
+
+  @Test
+  func perSideLoadPreservesExclusionsAndMixedUnitConversion() throws {
+    let exercise = try Exercise(name: "Split squat", loadMode: .bodyweight, repetitionMode: .perSide)
+    let workout = try Workout()
+    let entry = try workout.addExercise(exercise)
+    try entry.addSet(reps: 10, weight: 20, weightUnit: .kilograms)
+    try entry.addSet(reps: 5, weight: 10, weightUnit: .pounds)
+    let warmup = try entry.addSet(kind: .warmup, reps: 10, weight: 10, weightUnit: .kilograms)
+    let unweighted = try entry.addSet(reps: 10)
+    let incomplete = try entry.addSet(reps: 10, weight: 30, weightUnit: .kilograms, completedAt: nil)
+
+    #expect(warmup.volumeLoad == nil)
+    #expect(unweighted.volumeLoad == nil)
+    #expect(incomplete.volumeLoad == nil)
+    let expected = Decimal(400) + WeightUnit.pounds.convert(100, to: .kilograms)
+    #expect(entry.volumeLoad(in: .kilograms)?.value == expected)
+    #expect(workout.volumeLoad(in: .kilograms)?.value == expected)
+    #expect(workout.volumeLoad(for: exercise.id, in: .kilograms)?.value == expected)
+    #expect(VolumeLoad.forSet(
+      kind: .warmup, repetitions: 10, repetitionMode: .perSide,
+      weight: 10, unit: .kilograms
+    ) == nil)
+  }
+
+  @Test
   func volumeLoadFavorsMoreRepsWhenTheProductIsGreater() throws {
     let benchPress = try Exercise(
       name: "Bench Press",

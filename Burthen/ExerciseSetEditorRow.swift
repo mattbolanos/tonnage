@@ -97,17 +97,23 @@ struct ExerciseSetEditorRow: View {
     }
   }
 
+  private var weightedRepetitions: String {
+    exerciseSet.repetitionMode == .perSide
+      ? exerciseSet.repetitionMode.description(for: exerciseSet.reps, abbreviated: true)
+      : "\(exerciseSet.reps)"
+  }
+
   private var setSummary: Text {
     guard requiresWeight || exerciseSet.weight != nil else {
-      return Text("\(exerciseSet.reps) reps")
+      return Text("\(exerciseSet.repetitionMode.description(for: exerciseSet.reps, abbreviated: true))")
     }
 
     guard let weight = exerciseSet.weight else {
-      return Text("\(exerciseSet.reps) x — \(weightUnit.displayAbbreviation)")
+      return Text("\(weightedRepetitions) x — \(weightUnit.displayAbbreviation)")
     }
 
     return Text(
-      "\(exerciseSet.reps) x \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
+      "\(weightedRepetitions) x \(weight, format: .number.precision(.fractionLength(0...1))) \(weightUnit.displayAbbreviation)"
     )
   }
 
@@ -115,6 +121,7 @@ struct ExerciseSetEditorRow: View {
     VolumeLoad.forSet(
       kind: exerciseSet.kind,
       repetitions: exerciseSet.reps,
+      repetitionMode: exerciseSet.repetitionMode,
       weight: exerciseSet.weight,
       unit: exerciseSet.weightUnit ?? weightUnit
     )
@@ -129,14 +136,14 @@ struct ExerciseSetEditorRow: View {
     let loadDescription = setLoad.map { ", set load \($0.accessibilityText)" } ?? ""
 
     guard requiresWeight || exerciseSet.weight != nil else {
-      return "\(completion), \(type), \(exerciseSet.reps) repetitions\(loadDescription)"
+      return "\(completion), \(type), \(exerciseSet.repetitionMode.description(for: exerciseSet.reps))\(loadDescription)"
     }
 
     guard let weight = exerciseSet.weight else {
-      return "\(completion), \(type), \(exerciseSet.reps) repetitions, no weight"
+      return "\(completion), \(type), \(exerciseSet.repetitionMode.description(for: exerciseSet.reps)), no weight"
     }
 
-    return "\(completion), \(type), \(exerciseSet.reps) repetitions, \(weight) \(weightUnit.spokenName)\(loadDescription)"
+    return "\(completion), \(type), \(exerciseSet.repetitionMode.description(for: exerciseSet.reps)), \(weight) \(weightUnit.spokenName)\(loadDescription)"
   }
 
   private func editSet() {
@@ -144,7 +151,10 @@ struct ExerciseSetEditorRow: View {
   }
 
   private var completionButtonLabel: String {
-    exerciseSet.isCompleted ? "Mark Set Incomplete" : "Complete Set"
+    if exerciseSet.repetitionMode == .perSide {
+      return exerciseSet.isCompleted ? "Mark Both Sides Incomplete" : "Complete Both Sides"
+    }
+    return exerciseSet.isCompleted ? "Mark Set Incomplete" : "Complete Set"
   }
 
   private var completionSystemImage: String {

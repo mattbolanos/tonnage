@@ -63,6 +63,7 @@ struct ExerciseSetPicker: View {
             wholeWeight: $wholeWeight,
             usesHalfWeight: $usesHalfWeight,
             weightUnit: weightUnit,
+            repetitionMode: exerciseSet.repetitionMode,
             confirmation: startingWeightConfirmation
           )
         } else {
@@ -72,7 +73,8 @@ struct ExerciseSetPicker: View {
               repetitions: $repetitions,
               wholeWeight: $wholeWeight,
               usesHalfWeight: $usesHalfWeight,
-              weightUnit: weightUnit
+              weightUnit: weightUnit,
+              repetitionMode: exerciseSet.repetitionMode
             )
             .padding(.horizontal, LayoutMetrics.Padding.horizontalContent)
             .padding(.vertical, LayoutMetrics.Spacing.small)
@@ -139,7 +141,10 @@ struct ExerciseSetPicker: View {
         Text(errorMessage)
       }
     }
-    .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
+    .presentationDetents(
+      dynamicTypeSize.isAccessibilitySize || exerciseSet.repetitionMode == .perSide
+        ? [.large] : [.medium, .large]
+    )
     .presentationDragIndicator(.visible)
     .interactiveDismissDisabled(hasPendingChanges || isShowingError)
     .onDisappear(perform: savePendingChanges)

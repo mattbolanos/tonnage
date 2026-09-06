@@ -6,6 +6,68 @@ final class WorkoutFlowUITests: XCTestCase {
   }
 
   @MainActor
+  func testPerSideLoggingAndCompletedVolume() throws {
+    let app = XCUIApplication()
+    app.launchArguments = ["--ui-testing"]
+    app.launch()
+    app.buttons["Start Workout"].tap()
+    app.buttons["New Exercise"].tap()
+    createExercise(in: app, name: "Per Side Row", weight: "20", perSide: true)
+    app.buttons["Start Workout"].tap()
+    app.staticTexts["Per Side Row"].tap()
+
+    let firstSet = app.buttons["Set 1"]
+    XCTAssertTrue(firstSet.waitForExistence(timeout: 5))
+    let value = try XCTUnwrap(firstSet.value as? String)
+    XCTAssertTrue(value.contains("10 repetitions per side"))
+    XCTAssertTrue(value.contains("set load 400 pounds"))
+    XCTAssertEqual(app.buttons.matching(identifier: "Complete Both Sides").count, 3)
+    firstSet.tap()
+    XCTAssertTrue(app.staticTexts["Reps per side · Complete each set on both sides."].waitForExistence(timeout: 3))
+    XCTAssertTrue(app.buttons["Done"].isHittable)
+    XCTAssertTrue(app.switches["Half pounds"].isHittable)
+    XCTAssertTrue(app.staticTexts["Weight is the total weight moved in one repetition. Volume counts both sides."].isHittable)
+    capture(app, named: "Per-side set editor")
+    app.buttons["Done"].tap()
+    app.buttons["Complete Both Sides"].firstMatch.tap()
+    XCTAssertEqual(app.buttons.matching(identifier: "Mark Both Sides Incomplete").count, 1)
+    capture(app, named: "Per-side completion")
+    app.navigationBars["Per Side Row"].buttons.element(boundBy: 0).tap()
+    app.buttons["Finish Workout"].tap()
+    XCTAssertTrue(app.navigationBars["Workout Summary"].waitForExistence(timeout: 5))
+    XCTAssertEqual(app.staticTexts["summary-completed-sets"].label, "1 set completed")
+    let volume = app.descendants(matching: .any)["summary-volume-details"]
+    XCTAssertTrue(volume.exists)
+    XCTAssertTrue("\(volume.label) \(volume.value ?? "")".contains("400 pounds"), app.debugDescription)
+    let completedSet = app.descendants(matching: .any).matching(NSPredicate(
+      format: "label == %@ AND value CONTAINS %@", "Set 1", "10 repetitions per side"
+    )).firstMatch
+    XCTAssertTrue(completedSet.exists)
+    capture(app, named: "Per-side workout summary")
+  }
+
+  @MainActor
+  func testPerSideEditorAtLargestAccessibilityTextSize() throws {
+    let app = XCUIApplication()
+    app.launchArguments = ["--ui-testing", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    app.buttons["Start Workout"].tap()
+    app.buttons["New Exercise"].tap()
+    createExercise(in: app, name: "Per Side Large", weight: "20", perSide: true)
+    app.buttons["Start Workout"].tap()
+    app.staticTexts["Per Side Large"].tap()
+    app.buttons["Set 1"].tap()
+    let repetitions = app.descendants(matching: .any)["set-repetitions"]
+    XCTAssertTrue(repetitions.waitForExistence(timeout: 3))
+    XCTAssertEqual(repetitions.value as? String, "10 repetitions per side")
+    XCTAssertEqual(app.pickerWheels.count, 0)
+    XCTAssertTrue(app.buttons["Done"].isHittable)
+    capture(app, named: "Per-side editor at maximum text size")
+    app.buttons["Done"].tap()
+    XCTAssertTrue(app.buttons["Set 1"].waitForExistence(timeout: 3))
+  }
+
+  @MainActor
   func testEditingProgressionAndWorkoutCompletion() throws {
     XCUIDevice.shared.orientation = .portrait
     let app = XCUIApplication()
@@ -280,9 +342,13 @@ final class WorkoutFlowUITests: XCTestCase {
   }
 
   @MainActor
-  private func createExercise(in app: XCUIApplication, name: String, weight: String) {
+  private func createExercise(in app: XCUIApplication, name: String, weight: String, perSide: Bool = false) {
     let nameField = app.textFields["Name"]
     XCTAssertTrue(nameField.waitForExistence(timeout: 3))
+    if perSide {
+      app.buttons["Repetitions, Standard"].tap()
+      app.buttons["Per Side"].tap()
+    }
     nameField.tap()
     nameField.typeText(name)
     let weightField = app.textFields["Starting Working Weight (Optional)"]

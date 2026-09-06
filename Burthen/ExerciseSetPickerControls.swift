@@ -19,6 +19,7 @@ struct ExerciseSetPickerControls: View {
   @Binding var wholeWeight: Int
   @Binding var usesHalfWeight: Bool
   let weightUnit: WeightUnit
+  let repetitionMode: ExerciseRepetitionMode
 
   var body: some View {
     VStack(spacing: LayoutMetrics.Spacing.medium) {
@@ -30,9 +31,15 @@ struct ExerciseSetPickerControls: View {
       }
       .pickerStyle(.segmented)
 
+      if repetitionMode == .perSide {
+        Text("Reps per side · Complete each set on both sides.")
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+      }
+
       HStack(alignment: .top, spacing: LayoutMetrics.Spacing.large) {
         ZStack {
-          Picker("Repetitions", selection: $repetitions) {
+          Picker(repetitionMode.repetitionsLabel, selection: $repetitions) {
             ForEach(Self.repetitionRange, id: \.self) { repetition in
               HStack(spacing: unitSpacing) {
                 ZStack(alignment: .trailing) {
@@ -49,7 +56,7 @@ struct ExerciseSetPickerControls: View {
           }
           .pickerStyle(.wheel)
           .labelsHidden()
-          .accessibilityValue("\(repetitions) repetitions")
+          .accessibilityValue(repetitionMode.description(for: repetitions))
 
           HStack(spacing: unitSpacing) {
             Text(Self.repetitionRange.upperBound, format: .number)
@@ -121,6 +128,11 @@ struct ExerciseSetPickerControls: View {
           .disabled(wholeWeight == Self.wholeWeightRange.upperBound)
         }
         .frame(maxWidth: .infinity)
+      }
+      if repetitionMode == .perSide {
+        Text("Weight is the total weight moved in one repetition. Volume counts both sides.")
+          .font(.footnote)
+          .foregroundStyle(.secondary)
       }
     }
   }

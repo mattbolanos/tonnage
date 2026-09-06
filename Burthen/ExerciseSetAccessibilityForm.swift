@@ -7,6 +7,7 @@ struct ExerciseSetAccessibilityForm: View {
   @Binding var wholeWeight: Int
   @Binding var usesHalfWeight: Bool
   let weightUnit: WeightUnit
+  let repetitionMode: ExerciseRepetitionMode
   let confirmation: String?
 
   var body: some View {
@@ -18,12 +19,12 @@ struct ExerciseSetAccessibilityForm: View {
         }
       }
 
-      Section("Repetitions") {
+      Section(repetitionMode.repetitionsLabel) {
         Stepper(value: $repetitions, in: ExerciseSetPickerControls.repetitionRange) {
-          Text("\(repetitions) reps")
+          Text(repetitionMode.description(for: repetitions, abbreviated: true))
         }
-        .accessibilityLabel("Repetitions")
-        .accessibilityValue("\(repetitions) repetitions")
+        .accessibilityLabel(repetitionMode.repetitionsLabel)
+        .accessibilityValue(repetitionMode.description(for: repetitions))
         .accessibilityIdentifier("set-repetitions")
       }
 
@@ -37,6 +38,13 @@ struct ExerciseSetAccessibilityForm: View {
 
         Toggle("Half \(weightUnit.spokenName)", isOn: $usesHalfWeight)
           .disabled(wholeWeight == ExerciseSetPickerControls.wholeWeightRange.upperBound)
+      }
+
+      if repetitionMode == .perSide {
+        Section {
+          Text("Complete each set on both sides. Weight is the total weight moved in one repetition. Volume counts both sides.")
+            .foregroundStyle(.secondary)
+        }
       }
 
       if let confirmation {

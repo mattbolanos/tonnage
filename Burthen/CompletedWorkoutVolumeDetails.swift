@@ -10,7 +10,7 @@ struct CompletedWorkoutVolumeDetails: View {
 
   var body: some View {
     DisclosureGroup {
-      Text("Volume adds weight × repetitions for completed working sets. Warm-ups and sets without weight don’t contribute.")
+      Text("Volume adds weight × repetitions for completed working sets. Per-side sets count repetitions on both sides. Warm-ups and sets without weight don’t contribute.")
         .font(.subheadline)
         .foregroundStyle(.secondary)
 

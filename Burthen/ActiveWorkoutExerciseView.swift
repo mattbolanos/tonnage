@@ -78,6 +78,10 @@ struct ActiveWorkoutExerciseView: View {
         .accessibilityLabel("Add Set")
       } header: {
         SectionHeader("Sets")
+      } footer: {
+        if workoutExercise.exercise?.repetitionMode == .perSide {
+          Text("Reps are per side. Mark a set complete after finishing both sides.")
+        }
       }
       .listSectionMargins(
         .horizontal,
