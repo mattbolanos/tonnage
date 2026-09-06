@@ -30,6 +30,9 @@ enum LayoutMetrics {
   }
 
   enum Size {
+    static let liveActivityLogoWidth: CGFloat = 22
+    /// Fits compact elapsed time through the eight-hour lifetime, such as “7h 59m”.
+    static let liveActivityCompactTimerWidth: CGFloat = 52
     static let contentUnavailableLogoWidth: CGFloat = 64
     static let circularProgress: CGFloat = 24
     static let setNumberColumn = Spacing.large

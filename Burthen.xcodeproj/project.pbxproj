@@ -10,6 +10,7 @@
 		83F8E980303E43220044BD95 /* BurthenIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 83F8E97F303E43220044BD95 /* BurthenIcon.icon */; };
 		83F8E981303E43220044BD95 /* BurthenIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 83F8E97F303E43220044BD95 /* BurthenIcon.icon */; };
 		A100000130155EBB003E2C6E /* BurthenWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A100000330155EBB003E2C6E /* BurthenWidgets.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A200000130155EBB003E2C6E /* Burthen/DesignSystem/LayoutMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000230155EBB003E2C6E /* Burthen/DesignSystem/LayoutMetrics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +57,7 @@
 		83013A6D30155EBD003E2C6E /* BurthenUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BurthenUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		83F8E97F303E43220044BD95 /* BurthenIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = BurthenIcon.icon; sourceTree = "<group>"; };
 		A100000330155EBB003E2C6E /* BurthenWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BurthenWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A200000230155EBB003E2C6E /* Burthen/DesignSystem/LayoutMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Burthen/DesignSystem/LayoutMetrics.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -128,6 +130,7 @@
 				83013A7030155EBD003E2C6E /* BurthenUITests */,
 				83013A5530155EBB003E2C6E /* Products */,
 				83F8E97F303E43220044BD95 /* BurthenIcon.icon */,
+				A200000230155EBB003E2C6E /* Burthen/DesignSystem/LayoutMetrics.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -346,6 +349,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A200000130155EBB003E2C6E /* Burthen/DesignSystem/LayoutMetrics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
