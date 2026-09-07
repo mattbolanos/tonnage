@@ -66,77 +66,18 @@ struct ExercisePickerView: View {
 
   var body: some View {
     NavigationStack {
-      List {
-        if !filteredExercises.isEmpty {
-          if canShowNewExercise {
-            Section {
-              Button(action: addExercise) {
-                Label("New Exercise", systemImage: "plus")
-                  .foregroundStyle(.pink)
-              }
-            }
-          }
-          if !exercisesNotInWorkout.isEmpty {
-            Section {
-              ForEach(exercisesNotInWorkout) { exercise in
-                ExercisePickerRow(
-                  exercise: exercise,
-                  isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
-                  isSelected: selectedExerciseIDs.contains(exercise.id),
-                  action: { toggleSelection(of: exercise) }
-                )
-              }
-            }
-          }
-
-          if !exercisesInWorkout.isEmpty {
-            Section {
-              ForEach(exercisesInWorkout) { exercise in
-                ExercisePickerRow(
-                  exercise: exercise,
-                  isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
-                  isSelected: selectedExerciseIDs.contains(exercise.id),
-                  isInWorkout: true,
-                  action: { toggleSelection(of: exercise) }
-                )
-              }
-            } header: {
-              Text("Already in Workout")
-            }
-          }
-
-        }
-      }
-      .overlay {
+      Group {
         if activeExercises.isEmpty {
-          ContentUnavailableView {
-            ContentUnavailableLogoLabel(title: "No Exercises Yet")
-          } description: {
-            Text("Create an exercise to add it to your library and select it here.")
-          } actions: {
-            if canShowNewExercise {
-              Button("New Exercise", systemImage: "plus", action: addExercise)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            }
-          }
-        } else if filteredExercises.isEmpty {
-          ContentUnavailableView {
-            Label("No Results", systemImage: "magnifyingglass")
-          } description: {
-            Text("No exercises match “\(searchText)”.")
-          } actions: {
-            Button("Clear Search", action: clearSearch)
-              .buttonStyle(.borderedProminent)
-              .controlSize(.large)
-          }
+          exerciseList
+        } else {
+          exerciseList
+            .searchable(
+              text: $searchText,
+              isPresented: $isSearchPresented,
+              prompt: "Search Exercises"
+            )
         }
       }
-      .searchable(
-        text: $searchText,
-        isPresented: $isSearchPresented,
-        prompt: "Search Exercises"
-      )
       .navigationTitle("Add Exercises")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -146,18 +87,19 @@ struct ExercisePickerView: View {
         }
       }
       .safeAreaInset(edge: .bottom) {
-        Button(action: addSelectedExercises) {
-          Text(confirmationTitle)
-            .font(.headline)
-            .frame(maxWidth: .infinity)
+        if !selectedExercises.isEmpty {
+          Button(action: addSelectedExercises) {
+            Text(confirmationTitle)
+              .font(.headline)
+              .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.glassProminent)
+          .controlSize(.large)
+          .accessibilityIdentifier("confirm-add-exercises")
+          .accessibilityInputLabels(["Add Exercises", "Add"])
+          .padding(.horizontal, LayoutMetrics.Padding.horizontalContent)
+          .padding(.vertical, LayoutMetrics.Spacing.small)
         }
-        .buttonStyle(.glassProminent)
-        .controlSize(.large)
-        .disabled(selectedExercises.isEmpty)
-        .accessibilityIdentifier("confirm-add-exercises")
-        .accessibilityInputLabels(["Add Exercises", "Add"])
-        .padding(.horizontal, LayoutMetrics.Padding.horizontalContent)
-        .padding(.vertical, LayoutMetrics.Spacing.small)
       }
       .sheet(isPresented: $isAddingExercise) {
         AddExerciseView(onAdd: selectNewExercise)
@@ -168,6 +110,75 @@ struct ExercisePickerView: View {
       }
     }
     .tint(.pink)
+  }
+
+  private var exerciseList: some View {
+    List {
+      if !filteredExercises.isEmpty {
+        if canShowNewExercise {
+          Section {
+            Button(action: addExercise) {
+              Label("New Exercise", systemImage: "plus")
+                .foregroundStyle(.pink)
+            }
+          }
+        }
+        if !exercisesNotInWorkout.isEmpty {
+          Section {
+            ForEach(exercisesNotInWorkout) { exercise in
+              ExercisePickerRow(
+                exercise: exercise,
+                isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
+                isSelected: selectedExerciseIDs.contains(exercise.id),
+                action: { toggleSelection(of: exercise) }
+              )
+            }
+          }
+        }
+
+        if !exercisesInWorkout.isEmpty {
+          Section {
+            ForEach(exercisesInWorkout) { exercise in
+              ExercisePickerRow(
+                exercise: exercise,
+                isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
+                isSelected: selectedExerciseIDs.contains(exercise.id),
+                isInWorkout: true,
+                action: { toggleSelection(of: exercise) }
+              )
+            }
+          } header: {
+            Text("Already in Workout")
+          }
+        }
+
+      }
+    }
+    .overlay {
+      if activeExercises.isEmpty {
+        ContentUnavailableView {
+          ContentUnavailableLogoLabel(title: "No Exercises Yet")
+        } description: {
+          Text("Create an exercise to add it to your library and select it here.")
+        } actions: {
+          if canShowNewExercise {
+            Button("New Exercise", systemImage: "plus", action: addExercise)
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+          }
+        }
+      } else if filteredExercises.isEmpty {
+        ContentUnavailableView {
+          Label("No Results", systemImage: "magnifyingglass")
+        } description: {
+          Text("No exercises match “\(searchText)”.")
+        } actions: {
+          Button("Clear Search", action: clearSearch)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+      }
+    }
   }
 
   private func addExercise() {
