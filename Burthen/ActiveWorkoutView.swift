@@ -156,6 +156,7 @@ private struct ActiveWorkoutEditor: View {
       switch sheet {
       case .exercisePicker:
         ExercisePickerView(
+          inWorkoutExerciseIDs: Set(workout.workoutExercises.compactMap { $0.exercise?.id }),
           onAdd: addExercises,
           errorMessage: activeWorkoutErrorMessage
         )

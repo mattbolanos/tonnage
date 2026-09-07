@@ -17,11 +17,14 @@ struct ExercisePickerView: View {
   private var activeExercises: [Exercise]
 
   var existingExerciseIDs: Set<UUID> = []
+  /// Informational membership for active workouts; these exercises remain selectable.
+  var inWorkoutExerciseIDs: Set<UUID> = []
   let onAdd: ([Exercise]) throws -> Void
   var errorMessage: (Error) -> String = { $0.localizedDescription }
 
   @State private var selectedExerciseIDs: [UUID] = []
   @State private var searchText = ""
+  @State private var isSearchPresented = false
   @State private var isAddingExercise = false
   @State private var isShowingError = false
   @State private var errorText = ""
@@ -33,12 +36,24 @@ struct ExercisePickerView: View {
     }
   }
 
+  private var canShowNewExercise: Bool {
+    !isSearchPresented && searchText.isEmpty
+  }
+
   private var selectedExercises: [Exercise] {
     selectedExerciseIDs.compactMap { exerciseID in
       activeExercises.first {
         $0.id == exerciseID && !existingExerciseIDs.contains(exerciseID)
       }
     }
+  }
+
+  private var exercisesNotInWorkout: [Exercise] {
+    filteredExercises.filter { !inWorkoutExerciseIDs.contains($0.id) }
+  }
+
+  private var exercisesInWorkout: [Exercise] {
+    filteredExercises.filter { inWorkoutExerciseIDs.contains($0.id) }
   }
 
   private var confirmationTitle: LocalizedStringKey {
@@ -53,20 +68,43 @@ struct ExercisePickerView: View {
     NavigationStack {
       List {
         if !filteredExercises.isEmpty {
-          Section {
-            ForEach(filteredExercises) { exercise in
-              ExercisePickerRow(
-                exercise: exercise,
-                isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
-                isSelected: selectedExerciseIDs.contains(exercise.id),
-                action: { toggleSelection(of: exercise) }
-              )
+          if canShowNewExercise {
+            Section {
+              Button(action: addExercise) {
+                Label("New Exercise", systemImage: "plus")
+                  .foregroundStyle(.pink)
+              }
+            }
+          }
+          if !exercisesNotInWorkout.isEmpty {
+            Section {
+              ForEach(exercisesNotInWorkout) { exercise in
+                ExercisePickerRow(
+                  exercise: exercise,
+                  isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
+                  isSelected: selectedExerciseIDs.contains(exercise.id),
+                  action: { toggleSelection(of: exercise) }
+                )
+              }
             }
           }
 
-          Section {
-            Button("New Exercise", systemImage: "plus", action: addExercise)
+          if !exercisesInWorkout.isEmpty {
+            Section {
+              ForEach(exercisesInWorkout) { exercise in
+                ExercisePickerRow(
+                  exercise: exercise,
+                  isAlreadyAdded: existingExerciseIDs.contains(exercise.id),
+                  isSelected: selectedExerciseIDs.contains(exercise.id),
+                  isInWorkout: true,
+                  action: { toggleSelection(of: exercise) }
+                )
+              }
+            } header: {
+              Text("Already in Workout")
+            }
           }
+
         }
       }
       .overlay {
@@ -76,9 +114,11 @@ struct ExercisePickerView: View {
           } description: {
             Text("Create an exercise to add it to your library and select it here.")
           } actions: {
-            Button("New Exercise", systemImage: "plus", action: addExercise)
-              .buttonStyle(.borderedProminent)
-              .controlSize(.large)
+            if canShowNewExercise {
+              Button("New Exercise", systemImage: "plus", action: addExercise)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
           }
         } else if filteredExercises.isEmpty {
           ContentUnavailableView {
@@ -89,17 +129,20 @@ struct ExercisePickerView: View {
             Button("Clear Search", action: clearSearch)
               .buttonStyle(.borderedProminent)
               .controlSize(.large)
-            Button("New Exercise", systemImage: "plus", action: addExercise)
-              .controlSize(.large)
           }
         }
       }
-      .searchable(text: $searchText, prompt: "Search Exercises")
+      .searchable(
+        text: $searchText,
+        isPresented: $isSearchPresented,
+        prompt: "Search Exercises"
+      )
       .navigationTitle("Add Exercises")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel", action: dismiss.callAsFunction)
+            .tint(.primary)
         }
       }
       .safeAreaInset(edge: .bottom) {
