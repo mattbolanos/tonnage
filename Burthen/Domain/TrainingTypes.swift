@@ -19,6 +19,17 @@ enum ExerciseLoadMode: String, Codable, CaseIterable {
 enum ExerciseRepetitionMode: String, Codable, CaseIterable {
   case standard
   case perSide
+
+  var repetitionsLabel: String {
+    self == .perSide ? "Repetitions per side" : "Repetitions"
+  }
+
+  func description(for repetitions: Int, abbreviated: Bool = false) -> String {
+    let unit = abbreviated ? "reps" : "repetitions"
+    return self == .perSide
+      ? "\(repetitions) \(unit) per side"
+      : "\(repetitions) \(unit)"
+  }
 }
 
 enum ExerciseOrigin: String, Codable, CaseIterable {
@@ -78,6 +89,7 @@ struct VolumeLoad: Equatable {
   static func forSet(
     kind: ExerciseSetKind,
     repetitions: Int,
+    repetitionMode: ExerciseRepetitionMode = .standard,
     weight: Decimal?,
     unit: WeightUnit?
   ) -> VolumeLoad? {
@@ -91,7 +103,9 @@ struct VolumeLoad: Equatable {
       return nil
     }
 
-    return VolumeLoad(value: Decimal(repetitions) * weight, unit: unit)
+    // A per-side set records equal repetitions on both sides, with weight per repetition.
+    let sideCount: Decimal = repetitionMode == .perSide ? 2 : 1
+    return VolumeLoad(value: Decimal(repetitions) * sideCount * weight, unit: unit)
   }
 
   var formattedValue: String {

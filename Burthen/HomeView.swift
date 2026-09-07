@@ -14,8 +14,6 @@ struct HomeView: View {
   let workouts: [Workout]
   let resumeActiveWorkout: () -> Void
 
-  @State private var isCreatingTemplate = false
-
   private var activeWorkout: Workout? {
     workouts.first { $0.status == .inProgress }
   }
@@ -69,33 +67,41 @@ struct HomeView: View {
           ContentUnavailableView {
             ContentUnavailableLogoLabel(title: "No Workouts Yet")
           } description: {
-            Text("Start a blank workout or choose a template to begin.")
+            Text("Choose your exercises and start logging your sets.")
+          } actions: {
+            Button("Start Workout", systemImage: "play.fill", action: startWorkoutDraft)
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+              .tint(.pink)
+
+            if hasActiveTemplates {
+              NavigationLink("Choose a Template", value: HomeRoute.templates)
+                .controlSize(.large)
+            }
           }
         }
       }
       .navigationTitle("Workouts")
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Menu("Add Workout", systemImage: "plus") {
-            NavigationLink(value: HomeRoute.blank) {
-              Label("Blank Workout", systemImage: "doc")
-            }
-            if !hasActiveTemplates {
-              Button(
-                "Create a Template",
-                systemImage: "rectangle.stack.badge.plus",
-                action: createTemplate
-              )
-            } else {
-              NavigationLink(value: HomeRoute.templates) {
-                Label("Choose a Template", systemImage: "rectangle.stack")
+          Group {
+            if hasActiveTemplates {
+              Menu("Add Workout", systemImage: "plus") {
+                NavigationLink(value: HomeRoute.blank) {
+                  Label("Blank Workout", systemImage: "doc")
+                }
+                NavigationLink(value: HomeRoute.templates) {
+                  Label("Choose a Template", systemImage: "rectangle.stack")
+                }
               }
+            } else {
+              Button("Add Workout", systemImage: "plus", action: startWorkoutDraft)
             }
           }
           .disabled(activeWorkout != nil)
           .accessibilityHint(
             activeWorkout == nil
-              ? "Choose how to start a workout."
+              ? "Choose exercises for a new workout."
               : "Finish or discard the active workout before starting a new one."
           )
         }
@@ -106,9 +112,12 @@ struct HomeView: View {
           BlankWorkoutView()
         case .templates:
           WorkoutTemplatePickerView()
-        case .completedWorkout(let workoutID):
+        case .completedWorkout(let workoutID), .finishedWorkout(let workoutID):
           if let workout = workouts.first(where: { $0.id == workoutID }) {
-            CompletedWorkoutView(workout: workout)
+            CompletedWorkoutView(
+              workout: workout,
+              showsCompletion: route == .finishedWorkout(workoutID)
+            )
           } else {
             ContentUnavailableView {
               ContentUnavailableLogoLabel(title: "Workout Unavailable")
@@ -118,14 +127,11 @@ struct HomeView: View {
           }
         }
       }
-      .sheet(isPresented: $isCreatingTemplate) {
-        AddWorkoutTemplateView(offersWorkoutStart: true)
-      }
     }
   }
 
-  private func createTemplate() {
-    isCreatingTemplate = true
+  private func startWorkoutDraft() {
+    navigationPath.append(.blank)
   }
 
   private func showCompletedWorkout(_ workout: Workout) {

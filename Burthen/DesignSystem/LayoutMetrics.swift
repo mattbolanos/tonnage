@@ -30,10 +30,22 @@ enum LayoutMetrics {
   }
 
   enum Size {
+    static let liveActivityLogoWidth: CGFloat = 22
+    /// Fits compact elapsed time through the eight-hour lifetime, such as “7h 59m”.
+    static let liveActivityCompactTimerWidth: CGFloat = 52
     static let contentUnavailableLogoWidth: CGFloat = 64
+    static let circularProgress: CGFloat = 24
     static let setNumberColumn = Spacing.large
     static let workoutRowContentHeight: CGFloat = 44
     static let resumeWorkoutButton = workoutRowContentHeight
+    static let setCompletionControl = workoutRowContentHeight
+    /// Trims the wheel picker's near-invisible fade rows so the controls
+    /// beneath it sit close to the value they modify.
+    static let wheelPicker: CGFloat = 176
+  }
+
+  enum StrokeWidth {
+    static let circularProgress: CGFloat = 6
   }
 
   enum Insets {

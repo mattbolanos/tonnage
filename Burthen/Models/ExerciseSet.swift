@@ -38,13 +38,24 @@ final class ExerciseSet {
     self.workoutExercise = workoutExercise
   }
 
+  var repetitionMode: ExerciseRepetitionMode {
+    workoutExercise?.exercise?.repetitionMode ?? .standard
+  }
+
   var volumeLoad: VolumeLoad? {
-    VolumeLoad.forSet(
+    guard isCompleted else { return nil }
+
+    return VolumeLoad.forSet(
       kind: kind,
       repetitions: reps,
+      repetitionMode: repetitionMode,
       weight: weight,
       unit: weightUnit
     )
+  }
+
+  var isCompleted: Bool {
+    completedAt != nil
   }
 
   func validate() throws {

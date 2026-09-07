@@ -8,26 +8,36 @@ import SwiftUI
 
 struct ActiveWorkoutView: View {
   let workout: Workout
+  @Binding var navigationPath: [ActiveWorkoutExerciseRoute]
+  let onComplete: (Workout) -> Void
   let onDiscard: () -> Void
+  let onMinimize: () -> Void
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $navigationPath) {
       ActiveWorkoutEditor(
         workout: workout,
-        onDiscard: onDiscard
+        navigationPath: $navigationPath,
+        onComplete: onComplete,
+        onDiscard: onDiscard,
+        onMinimize: onMinimize
       )
     }
   }
 }
 
 private struct ActiveWorkoutEditor: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.modelContext) private var modelContext
 
   let workout: Workout
+  @Binding var navigationPath: [ActiveWorkoutExerciseRoute]
+  let onComplete: (Workout) -> Void
   let onDiscard: () -> Void
+  let onMinimize: () -> Void
 
   @State private var presentedSheet: ActiveWorkoutSheet?
-  @State private var isConfirmingWorkoutEnd = false
+  @State private var isConfirmingDiscard = false
   @State private var isShowingError = false
   @State private var errorMessage = ""
 
@@ -67,39 +77,42 @@ private struct ActiveWorkoutEditor: View {
         .onMove(perform: moveExercises)
       }
 
-      Button(action: requestWorkoutEnd) {
-        Text("End Workout")
-          .font(.headline)
-          .frame(maxWidth: .infinity)
+      Section {
+        Button(action: finishWorkout) {
+          Label("Finish Workout", systemImage: "checkmark")
+            .font(.headline)
+            .foregroundStyle(workout.isCompletable ? Color.white : Color.secondary)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glassProminent)
+        .controlSize(.large)
+        .tint(.pink)
+        .disabled(!workout.isCompletable)
+        .listRowInsets(LayoutMetrics.Insets.finalActionRow)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .accessibilityHint(
+          workout.isCompletable
+            ? "Saves completed sets and opens your workout summary."
+            : "Complete a set to finish this workout."
+        )
       }
-      .buttonStyle(.glass)
-      .controlSize(.large)
-      .tint(.red)
-      .listRowInsets(LayoutMetrics.Insets.finalActionRow)
-      .listRowSeparator(.hidden)
-      .listRowBackground(Color.clear)
-      .accessibilityHint("Shows options to save or discard this workout.")
-      .confirmationDialog(
-        "End Workout?",
-        isPresented: $isConfirmingWorkoutEnd,
-        titleVisibility: .visible
-      ) {
-        Button("Complete Workout", action: saveAndEndWorkout)
-        Button("Discard Workout", role: .destructive, action: discardWorkout)
-        Button("Continue Workout", role: .cancel) {}
-      } message: {
-        Text("Save your sets and workout duration, or discard this workout permanently.")
-      }
+      .listSectionSeparator(.hidden)
     }
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
     .background(Color(uiColor: .systemGroupedBackground))
-    .navigationTitle("Active Workout")
+    .navigationTitle(workout.displayName)
     .navigationBarTitleDisplayMode(.large)
     .navigationDestination(for: ActiveWorkoutExerciseRoute.self) { route in
       workoutExerciseDestination(for: route)
     }
     .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        Button("Minimize Workout", systemImage: "chevron.down", action: onMinimize)
+          .labelStyle(.iconOnly)
+      }
+
       ToolbarItemGroup(placement: .topBarTrailing) {
         EditButton()
 
@@ -110,10 +123,27 @@ private struct ActiveWorkoutEditor: View {
             action: presentTemplateEditor
           )
           .disabled(workout.orderedExercises.isEmpty)
+
+          Button(
+            "Discard Workout",
+            systemImage: "trash",
+            role: .destructive,
+            action: requestDiscard
+          )
         }
         .accessibilityHint(
           "Contains options for this workout."
         )
+        .confirmationDialog(
+          "Discard Workout?",
+          isPresented: $isConfirmingDiscard,
+          titleVisibility: .visible
+        ) {
+          Button("Discard Workout", role: .destructive, action: discardWorkout)
+          Button("Continue Workout", role: .cancel) {}
+        } message: {
+          Text("This permanently deletes the workout and its sets.")
+        }
 
         Button(
           "Add Exercise",
@@ -125,7 +155,11 @@ private struct ActiveWorkoutEditor: View {
     .sheet(item: $presentedSheet) { sheet in
       switch sheet {
       case .exercisePicker:
-        WorkoutExercisePicker(workout: workout)
+        ExercisePickerView(
+          inWorkoutExerciseIDs: Set(workout.workoutExercises.compactMap { $0.exercise?.id }),
+          onAdd: addExercises,
+          errorMessage: activeWorkoutErrorMessage
+        )
       case .template(let seed):
         AddWorkoutTemplateView(seed: seed)
       }
@@ -142,17 +176,34 @@ private struct ActiveWorkoutEditor: View {
     presentedSheet = .exercisePicker
   }
 
+  private func addExercises(_ exercises: [Exercise]) throws {
+    do {
+      let store = TrainingDataStore(modelContext: modelContext)
+      for exercise in exercises {
+        try store.addExercise(exercise, to: workout)
+      }
+      try modelContext.save()
+    } catch {
+      modelContext.rollback()
+      throw error
+    }
+  }
+
   private func presentTemplateEditor() {
     presentedSheet = .template(WorkoutTemplateSeed(workout: workout))
   }
 
-  private func requestWorkoutEnd() {
-    isConfirmingWorkoutEnd = true
+  private func requestDiscard() {
+    isConfirmingDiscard = true
   }
 
-  private func saveAndEndWorkout() {
-    performUpdate {
+  private func finishWorkout() {
+    let didComplete = performUpdate {
       try workout.complete()
+    }
+
+    if didComplete {
+      onComplete(workout)
     }
   }
 
@@ -230,13 +281,45 @@ private struct ActiveWorkoutEditor: View {
     if let workoutExercise = workout.workoutExercises.first(where: {
       $0.id == route.exerciseID
     }) {
-      ActiveWorkoutExerciseView(workoutExercise: workoutExercise)
+      ActiveWorkoutExerciseView(
+        workoutExercise: workoutExercise,
+        onNextExercise: showNextExercise,
+        onReturnToWorkout: returnToWorkout
+      )
+      .id(workoutExercise.id)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Minimize Workout", systemImage: "chevron.down", action: onMinimize)
+            .labelStyle(.iconOnly)
+        }
+      }
     } else {
       ContentUnavailableView {
         ContentUnavailableLogoLabel(title: "Exercise Unavailable")
       } description: {
         Text("This exercise is no longer part of the workout.")
       }
+    }
+  }
+
+  private func showNextExercise(withID exerciseID: UUID) {
+    guard workout.workoutExercises.contains(where: { $0.id == exerciseID }) else {
+      return
+    }
+
+    withAnimation(reduceMotion ? nil : .default) {
+      let route = ActiveWorkoutExerciseRoute(exerciseID: exerciseID)
+      if navigationPath.isEmpty {
+        navigationPath.append(route)
+      } else {
+        navigationPath[navigationPath.count - 1] = route
+      }
+    }
+  }
+
+  private func returnToWorkout() {
+    withAnimation(reduceMotion ? nil : .default) {
+      navigationPath.removeAll()
     }
   }
 
@@ -274,20 +357,17 @@ private struct ActiveWorkoutHeader: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.small) {
-      Text(workout.displayName)
-        .font(.headline)
-        .foregroundStyle(.secondary)
-
       Text(
         workout.startedAt,
         format: .dateTime
-          .weekday(.wide)
+          .weekday(.abbreviated)
           .month(.wide)
           .day()
           .hour()
           .minute()
       )
-      .font(.title3.weight(.semibold))
+      .font(.headline)
+      .foregroundStyle(.secondary)
 
       if let notes = workout.notes {
         Text(notes)
@@ -330,114 +410,6 @@ private struct ActiveWorkoutEmptyState: View {
   }
 }
 
-private struct WorkoutExercisePicker: View {
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.modelContext) private var modelContext
-
-  @Query(
-    filter: #Predicate<Exercise> { !$0.isArchived },
-    sort: \Exercise.name
-  )
-  private var activeExercises: [Exercise]
-
-  let workout: Workout
-
-  @State private var isShowingError = false
-  @State private var errorMessage = ""
-
-  var body: some View {
-    NavigationStack {
-      List {
-        Section {
-          ForEach(activeExercises) { exercise in
-            Button {
-              add(exercise)
-            } label: {
-              WorkoutExercisePickerRow(exercise: exercise)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Adds this exercise to the active workout.")
-          }
-        } footer: {
-          Text("An exercise can be added more than once.")
-        }
-      }
-      .overlay {
-        if activeExercises.isEmpty {
-          ContentUnavailableView {
-            ContentUnavailableLogoLabel(title: "No Exercises")
-          } description: {
-            Text("Create an exercise in Settings before adding it here.")
-          }
-        }
-      }
-      .navigationTitle("Add Exercise")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel", action: dismiss.callAsFunction)
-        }
-      }
-      .alert("Exercise Couldn’t Be Added", isPresented: $isShowingError) {
-        Button("OK", role: .cancel) {}
-      } message: {
-        Text(errorMessage)
-      }
-    }
-  }
-
-  private func add(_ exercise: Exercise) {
-    do {
-      _ = try TrainingDataStore(modelContext: modelContext).addExercise(
-        exercise,
-        to: workout
-      )
-      try modelContext.save()
-      dismiss()
-    } catch {
-      errorMessage = activeWorkoutErrorMessage(for: error)
-      isShowingError = true
-    }
-  }
-}
-
-private struct WorkoutExercisePickerRow: View {
-  let exercise: Exercise
-
-  var body: some View {
-    HStack(spacing: LayoutMetrics.Spacing.medium) {
-      VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-        Text(exercise.name)
-          .font(.body.weight(.medium))
-          .foregroundStyle(.primary)
-        Text(exercise.activeWorkoutTrackingSummary)
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-
-      Spacer()
-
-      Image(systemName: "plus.circle.fill")
-        .font(.title3)
-        .foregroundStyle(.tint)
-        .accessibilityHidden(true)
-    }
-    .contentShape(.rect)
-  }
-}
-
-extension Exercise {
-  fileprivate var activeWorkoutTrackingSummary: String {
-    let load =
-      switch loadMode {
-      case .externalResistance: "External resistance"
-      case .bodyweight: "Bodyweight"
-      }
-    let repetitions = repetitionMode == .perSide ? "Per side" : "Standard reps"
-    return "\(load) · \(repetitions)"
-  }
-}
-
 func activeWorkoutErrorMessage(for error: Error) -> String {
   guard let modelError = error as? WorkoutModelError else {
     return error.localizedDescription
@@ -459,7 +431,7 @@ func activeWorkoutErrorMessage(for error: Error) -> String {
   case .workoutAlreadyCompleted:
     "This workout has already ended."
   case .workoutHasNoSets:
-    "Add an exercise before saving the workout, or discard it instead."
+    "Complete at least one set before saving the workout, or discard it instead."
   case .workoutIsNotInProgress:
     "Only an active workout can be edited."
   default:
@@ -474,7 +446,10 @@ func activeWorkoutErrorMessage(for error: Error) -> String {
       notes: "Chest and shoulders",
       startedAt: .now.addingTimeInterval(-3_725)
     ),
-    onDiscard: {}
+    navigationPath: .constant([]),
+    onComplete: { _ in },
+    onDiscard: {},
+    onMinimize: {}
   )
   .modelContainer(for: BurthenSchema.models, inMemory: true)
 }

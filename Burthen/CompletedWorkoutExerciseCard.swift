@@ -9,22 +9,12 @@ struct CompletedWorkoutExerciseCard: View {
   let workoutExercise: WorkoutExercise
 
   var body: some View {
-    let orderedSets = workoutExercise.orderedSets
+    let orderedSets = workoutExercise.orderedSets.filter(\.isCompleted)
 
     VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.large) {
-      HStack(alignment: .top, spacing: LayoutMetrics.Spacing.medium) {
-        VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-          Text(workoutExercise.exercise?.name ?? "Unavailable Exercise")
-            .font(.headline)
-            .foregroundStyle(.primary)
-            .lineLimit(2)
-        }
-
-        Spacer(minLength: LayoutMetrics.Spacing.small)
-
-        TrainingLoadText(load: workoutExercise.volumeLoad)
-          .font(.subheadline.weight(.semibold))
-      }
+      Text(workoutExercise.exercise?.name ?? "Unavailable Exercise")
+        .font(.headline)
+        .foregroundStyle(.primary)
 
       if orderedSets.isEmpty {
         Text("No sets recorded")

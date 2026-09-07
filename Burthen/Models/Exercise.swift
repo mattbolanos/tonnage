@@ -88,7 +88,7 @@ final class Exercise {
     unit: WeightUnit = .pounds,
     at date: Date = .now
   ) throws {
-    guard origin == .custom else { throw WorkoutModelError.seededExerciseIsReadOnly }
+    // Starting weight is a personal preference, including for built-in exercises.
     try Self.validateStartingWorkingWeight(weight)
 
     startingWorkingWeight = weight

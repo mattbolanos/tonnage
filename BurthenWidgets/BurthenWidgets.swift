@@ -18,72 +18,38 @@ struct BurthenWidgets: WidgetBundle {
 struct WorkoutActivityWidget: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
-      VStack(alignment: .leading) {
-        Text(context.attributes.workoutName)
-          .font(.headline)
-
-        if context.isStale {
-          Label(
-            "Updating...",
-            systemImage: "arrow.trianglehead.2.clockwise"
-          )
-          .foregroundStyle(.secondary)
-        } else {
-          Text(
-            timerInterval: context.attributes.elapsedTimeRange,
-            countsDown: false
-          )
-          .monospacedDigit()
-        }
-      }
-      .padding()
+      WorkoutLockScreenView(context: context)
     } dynamicIsland: { context in
       DynamicIsland {
-        DynamicIslandExpandedRegion(.center) {
-          Text(context.attributes.workoutName)
-            .font(.headline)
+        DynamicIslandExpandedRegion(.leading) {
+          Label {
+            Text("Burthen")
+              .font(.subheadline.weight(.semibold))
+          } icon: {
+            BurthenActivityIcon()
+              .accessibilityHidden(true)
+          }
         }
         DynamicIslandExpandedRegion(.trailing) {
-          Text(
-            timerInterval: context.attributes.elapsedTimeRange,
-            countsDown: false
-          )
+          CompactWorkoutDuration(context: context)
+            .foregroundStyle(.pink)
+        }
+        DynamicIslandExpandedRegion(.bottom) {
+          Text(context.attributes.workoutName)
+            .font(.headline)
+            .lineLimit(2)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
       } compactLeading: {
         BurthenActivityIcon()
       } compactTrailing: {
-        CompactWorkoutDuration(startedAt: context.attributes.startedAt)
+        CompactWorkoutDuration(context: context)
           .foregroundStyle(.pink)
       } minimal: {
         BurthenActivityIcon()
       }
+      .keylineTint(.pink)
     }
-  }
-}
-
-private struct BurthenActivityIcon: View {
-  var body: some View {
-    Image("BurthenActivityIcon")
-      .accessibilityLabel("Burthen")
-  }
-}
-
-private struct CompactWorkoutDuration: View {
-  private static let minute: TimeInterval = 60
-
-  let startedAt: Date
-
-  var body: some View {
-    TimelineView(
-      .periodic(from: startedAt, by: Self.minute)
-    ) { context in
-      Text("\(elapsedMinutes(at: context.date))min")
-        .monospacedDigit()
-    }
-  }
-
-  private func elapsedMinutes(at date: Date) -> Int {
-    max(0, Int(date.timeIntervalSince(startedAt) / Self.minute))
   }
 }
 
@@ -129,6 +95,63 @@ extension WorkoutActivityAttributes.ContentState {
   "Dynamic Island Minimal",
   as: .dynamicIsland(.minimal),
   using: WorkoutActivityAttributes.preview
+) {
+  WorkoutActivityWidget()
+} contentStates: {
+  WorkoutActivityAttributes.ContentState.preview
+}
+
+#Preview(
+  "Lock Screen — Long Workout",
+  as: .content,
+  using: WorkoutActivityAttributes(
+    workoutID: UUID(),
+    workoutName: "Upper Body Strength and Conditioning",
+    startedAt: .now.addingTimeInterval(-7_205)
+  )
+) {
+  WorkoutActivityWidget()
+} contentStates: {
+  WorkoutActivityAttributes.ContentState.preview
+  WorkoutActivityAttributes.ContentState(isRunning: false)
+}
+
+#Preview(
+  "Dynamic Island — Long Duration",
+  as: .dynamicIsland(.compact),
+  using: WorkoutActivityAttributes(
+    workoutID: UUID(),
+    workoutName: "Push Day",
+    startedAt: .now.addingTimeInterval(-28_740)
+  )
+) {
+  WorkoutActivityWidget()
+} contentStates: {
+  WorkoutActivityAttributes.ContentState.preview
+}
+
+#Preview(
+  "Dynamic Island — Ten Minutes",
+  as: .dynamicIsland(.compact),
+  using: WorkoutActivityAttributes(
+    workoutID: UUID(),
+    workoutName: "Push Day",
+    startedAt: .now.addingTimeInterval(-600)
+  )
+) {
+  WorkoutActivityWidget()
+} contentStates: {
+  WorkoutActivityAttributes.ContentState.preview
+}
+
+#Preview(
+  "Dynamic Island — Hours and Minutes",
+  as: .dynamicIsland(.compact),
+  using: WorkoutActivityAttributes(
+    workoutID: UUID(),
+    workoutName: "Push Day",
+    startedAt: .now.addingTimeInterval(-4_440)
+  )
 ) {
   WorkoutActivityWidget()
 } contentStates: {

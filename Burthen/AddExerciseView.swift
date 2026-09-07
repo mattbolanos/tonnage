@@ -68,9 +68,11 @@ struct AddExerciseView: View {
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel", action: dismiss.callAsFunction)
+            .tint(.primary)
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("Create", action: save)
+            .tint(.primary)
             .disabled(!canSave)
         }
       }

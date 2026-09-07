@@ -296,12 +296,21 @@ private struct WorkoutTemplateForm: View {
       }
     }
     .sheet(isPresented: $isSelectingExercises) {
-      TemplateExerciseSelectionView(selectedExercises: $draft.exercises)
+      ExercisePickerView(
+        existingExerciseIDs: Set(draft.exercises.map { $0.exercise.id }),
+        onAdd: appendExercises
+      )
     }
   }
 
   private func selectExercises() {
     isSelectingExercises = true
+  }
+
+  private func appendExercises(_ exercises: [Exercise]) {
+    draft.exercises.append(contentsOf: exercises.map {
+      TemplateExerciseDraft(exercise: $0)
+    })
   }
 
   private func removeExercises(at offsets: IndexSet) {
@@ -346,180 +355,6 @@ private struct TemplateExerciseEditorRow: View {
       )
       .font(.subheadline)
     }
-  }
-}
-
-private struct TemplateExerciseSelectionView: View {
-  @Environment(\.dismiss) private var dismiss
-
-  @Query(
-    filter: #Predicate<Exercise> { !$0.isArchived },
-    sort: \Exercise.name
-  )
-  private var activeExercises: [Exercise]
-
-  @Binding var selectedExercises: [TemplateExerciseDraft]
-  @State private var pendingExerciseIDs: Set<UUID> = []
-  @State private var newlyCreatedExerciseIDs: Set<UUID> = []
-  @State private var isAddingExercise = false
-
-  private var existingExerciseIDs: Set<UUID> {
-    Set(selectedExercises.map { $0.exercise.id })
-  }
-
-  private var hasSelectedExercises: Bool {
-    !pendingExerciseIDs.isEmpty
-      || !newlyCreatedExerciseIDs.isDisjoint(with: existingExerciseIDs)
-  }
-
-  var body: some View {
-    NavigationStack {
-      List {
-        if !activeExercises.isEmpty {
-          Section {
-            Button(action: addExercise) {
-              Label("New Exercise", systemImage: "plus")
-                .foregroundStyle(.pink)
-            }
-          }
-
-          Section {
-            ForEach(activeExercises) { exercise in
-              TemplateExerciseSelectionRow(
-                exercise: exercise,
-                isAlreadyAdded: isAlreadyAdded(exercise),
-                isSelected: isSelected(exercise),
-                action: { toggleSelection(of: exercise) }
-              )
-            }
-          }
-        }
-      }
-      .overlay {
-        if activeExercises.isEmpty {
-          ContentUnavailableView {
-            ContentUnavailableLogoLabel(title: "No Exercises")
-          } description: {
-            Text("Create an exercise to add it to this template.")
-          } actions: {
-            Button("New Exercise", systemImage: "plus", action: addExercise)
-              .buttonStyle(.borderedProminent)
-              .controlSize(.large)
-              .tint(.pink)
-          }
-        }
-      }
-      .navigationTitle("Add Exercises")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel", action: dismiss.callAsFunction)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Add", action: addSelectedExercises)
-            .disabled(!hasSelectedExercises)
-        }
-      }
-      .sheet(isPresented: $isAddingExercise) {
-        AddExerciseView(onAdd: selectNewExercise)
-      }
-    }
-  }
-
-  private func addExercise() {
-    isAddingExercise = true
-  }
-
-  private func selectNewExercise(_ exercise: Exercise) {
-    guard !existingExerciseIDs.contains(exercise.id) else { return }
-    selectedExercises.append(TemplateExerciseDraft(exercise: exercise))
-    newlyCreatedExerciseIDs.insert(exercise.id)
-  }
-
-  private func isAlreadyAdded(_ exercise: Exercise) -> Bool {
-    existingExerciseIDs.contains(exercise.id)
-      && !newlyCreatedExerciseIDs.contains(exercise.id)
-  }
-
-  private func isSelected(_ exercise: Exercise) -> Bool {
-    pendingExerciseIDs.contains(exercise.id)
-      || (
-        newlyCreatedExerciseIDs.contains(exercise.id)
-          && existingExerciseIDs.contains(exercise.id)
-      )
-  }
-
-  private func toggleSelection(of exercise: Exercise) {
-    if newlyCreatedExerciseIDs.contains(exercise.id) {
-      toggleNewlyCreatedExercise(exercise)
-    } else if pendingExerciseIDs.contains(exercise.id) {
-      pendingExerciseIDs.remove(exercise.id)
-    } else {
-      pendingExerciseIDs.insert(exercise.id)
-    }
-  }
-
-  private func toggleNewlyCreatedExercise(_ exercise: Exercise) {
-    if existingExerciseIDs.contains(exercise.id) {
-      selectedExercises.removeAll { $0.exercise.id == exercise.id }
-    } else {
-      selectedExercises.append(TemplateExerciseDraft(exercise: exercise))
-    }
-  }
-
-  private func addSelectedExercises() {
-    for exercise in activeExercises where pendingExerciseIDs.contains(exercise.id) {
-      selectedExercises.append(TemplateExerciseDraft(exercise: exercise))
-    }
-    dismiss()
-  }
-}
-
-private struct TemplateExerciseSelectionRow: View {
-  let exercise: Exercise
-  let isAlreadyAdded: Bool
-  let isSelected: Bool
-  let action: () -> Void
-
-  private var accessibilityValue: String {
-    if isAlreadyAdded {
-      "Already added"
-    } else if isSelected {
-      "Selected"
-    } else {
-      "Not selected"
-    }
-  }
-
-  var body: some View {
-    Button(action: action) {
-      HStack {
-        VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-          Text(exercise.name)
-            .foregroundStyle(.primary)
-          Text(exercise.trackingSummary)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-
-        Spacer()
-
-        if isAlreadyAdded {
-          Image(systemName: "checkmark")
-            .fontWeight(.semibold)
-            .foregroundStyle(.secondary)
-        } else if isSelected {
-          Image(systemName: "checkmark")
-            .fontWeight(.semibold)
-            .foregroundStyle(.pink)
-        }
-      }
-      .contentShape(.rect)
-    }
-    .buttonStyle(.plain)
-    .disabled(isAlreadyAdded)
-    .accessibilityLabel(exercise.name)
-    .accessibilityValue(accessibilityValue)
   }
 }
 
@@ -657,22 +492,6 @@ extension WorkoutTemplate {
         )
       }
     )
-  }
-}
-
-extension Exercise {
-  fileprivate var trackingSummary: String {
-    let load =
-      switch loadMode {
-      case .externalResistance: "External Resistance"
-      case .bodyweight: "Bodyweight"
-      }
-    let repetitions =
-      switch repetitionMode {
-      case .standard: "Standard Reps"
-      case .perSide: "Per Side"
-      }
-    return "\(load) · \(repetitions)"
   }
 }
 

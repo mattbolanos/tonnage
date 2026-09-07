@@ -32,7 +32,7 @@ struct WorkoutTemplatePickerView: View {
       .accessibilityHint(
         template.isReadyToStart
           ? "Starts a new workout from this template."
-          : "Edit this template in Settings before using it."
+          : "Edit this template in Library before using it."
       )
     }
     .overlay {
@@ -40,7 +40,7 @@ struct WorkoutTemplatePickerView: View {
         ContentUnavailableView(
           "No Templates Yet",
           systemImage: "rectangle.stack",
-          description: Text("Create a workout template in Settings to use it here.")
+          description: Text("Create a workout template in Library to use it here.")
         )
       }
     }

@@ -94,7 +94,9 @@ final class Workout {
   }
 
   var isCompletable: Bool {
-    workoutExercises.contains { !$0.exerciseSets.isEmpty }
+    workoutExercises.contains { workoutExercise in
+      workoutExercise.exerciseSets.contains { $0.isCompleted }
+    }
   }
 
   func elapsedDuration(at currentDate: Date = .now) -> TimeInterval? {
@@ -167,8 +169,9 @@ final class Workout {
       throw WorkoutModelError.endBeforeStart
     }
 
-    for workoutExercise in workoutExercises {
-      try workoutExercise.validate()
+    for exerciseSet in workoutExercises.flatMap(\.exerciseSets)
+    where exerciseSet.isCompleted {
+      try exerciseSet.validate()
     }
 
     endedAt = endDate
