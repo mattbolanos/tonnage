@@ -97,7 +97,7 @@ struct VolumeLoad: Equatable {
       kind == .working,
       repetitions > 0,
       let weight,
-      weight > 0,
+      weight >= 0,
       let unit
     else {
       return nil

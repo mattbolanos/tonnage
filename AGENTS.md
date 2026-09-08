@@ -5,3 +5,5 @@ Prefer the spacing supplied by native SwiftUI containers such as `Form`, `List`,
 For list deletion and reordering, use native `ForEach.onDelete`, `ForEach.onMove`, and `EditButton` behavior consistently. Every trailing delete swipe action must use `allowsFullSwipe: false` and an icon-only `Label` with the `trash` system image and destructive role; keep a concise, specific title such as “Delete Set” for accessibility, but do not show that text visually. Preserve domain-specific deletion guards with `deleteDisabled` where needed.
 
 consider guiding principles from https://benji.org/family-values when mulling over design + UX/UI decisions.
+
+rather than default blue, choose apple system pink to match rest of repo.

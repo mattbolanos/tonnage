@@ -261,10 +261,33 @@ struct BurthenTests {
     #expect(throws: WorkoutModelError.missingWeight) {
       try entry.addSet(reps: 5)
     }
+    #expect(throws: WorkoutModelError.invalidWeight) {
+      try entry.addSet(reps: 5, weight: -1, weightUnit: .pounds)
+    }
     #expect(throws: WorkoutModelError.invalidWeightPrecision) {
       try entry.addSet(reps: 5, weight: Decimal(string: "42.25"), weightUnit: .pounds)
     }
     #expect(entry.exerciseSets.isEmpty)
+  }
+
+  @Test
+  func zeroWeightCanBeCompletedAndSavedAsStartingWeight() throws {
+    let container = try makeContainer()
+    let store = TrainingDataStore(modelContext: container.mainContext)
+    let exercise = try Exercise(name: "Zero Weight Press", loadMode: .externalResistance)
+    let workout = try Workout()
+    container.mainContext.insert(workout)
+    let entry = try workout.addExercise(exercise)
+    let exerciseSet = try entry.addSet(reps: 10, weight: 0, weightUnit: .pounds)
+
+    try store.setCompletion(true, for: exerciseSet)
+    try store.saveStartingWeight(from: exerciseSet)
+
+    #expect(exerciseSet.isCompleted)
+    #expect(exerciseSet.weight == 0)
+    #expect(exerciseSet.volumeLoad == VolumeLoad(value: 0, unit: .pounds))
+    #expect(exercise.startingWorkingWeight == 0)
+    #expect(exercise.startingWorkingWeightUnit == .pounds)
   }
 
   @Test
@@ -719,7 +742,7 @@ struct BurthenTests {
     #expect(exercise.startingWorkingWeightUnit == .pounds)
     #expect(exercise.updatedAt == updateDate)
     #expect(throws: WorkoutModelError.invalidWeight) {
-      try exercise.updateStartingWorkingWeight(0)
+      try exercise.updateStartingWorkingWeight(-1)
     }
     #expect(throws: WorkoutModelError.invalidWeightPrecision) {
       try exercise.updateStartingWorkingWeight(Decimal(string: "42.25"))

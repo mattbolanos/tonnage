@@ -6,6 +6,37 @@ final class WorkoutFlowUITests: XCTestCase {
   }
 
   @MainActor
+  func testZeroWeightSetCanBeSavedAndCompleted() throws {
+    let app = XCUIApplication()
+    app.launchArguments = ["--ui-testing"]
+    app.launch()
+    app.buttons["Start Workout"].tap()
+    app.buttons["New Exercise"].tap()
+    createExercise(in: app, name: "Zero Weight Press", weight: "")
+    app.buttons["Start Workout"].tap()
+    app.staticTexts["Zero Weight Press"].tap()
+    app.buttons["Set 1"].tap()
+    app.buttons["Done"].tap()
+    XCTAssertTrue(try XCTUnwrap(app.buttons["Set 1"].value as? String).contains("0 pounds"))
+    app.buttons["Set 1"].tap()
+    app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: "1")
+    app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: "0")
+    app.buttons["Done"].tap()
+
+    let firstSet = app.buttons["Set 1"]
+    XCTAssertTrue(firstSet.waitForExistence(timeout: 3))
+    XCTAssertTrue(try XCTUnwrap(firstSet.value as? String).contains("0 pounds"))
+    app.buttons["Complete Set"].firstMatch.tap()
+    XCTAssertTrue(try XCTUnwrap(firstSet.value as? String).contains("Completed"))
+    XCTAssertTrue(app.buttons["Mark Set Incomplete"].exists)
+    firstSet.tap()
+    XCTAssertEqual(app.pickerWheels.element(boundBy: 1).value as? String, "0")
+    capture(app, named: "Zero weight retained in picker")
+    app.buttons["Done"].tap()
+    capture(app, named: "Pink completion and Add Set with native row height")
+  }
+
+  @MainActor
   func testPerSideLoggingAndCompletedVolume() throws {
     let app = XCUIApplication()
     app.launchArguments = ["--ui-testing"]

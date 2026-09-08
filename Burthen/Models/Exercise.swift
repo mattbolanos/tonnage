@@ -98,7 +98,7 @@ final class Exercise {
 
   static func validateStartingWorkingWeight(_ weight: Decimal?) throws {
     guard let weight else { return }
-    guard weight > 0 else { throw WorkoutModelError.invalidWeight }
+    guard weight >= 0 else { throw WorkoutModelError.invalidWeight }
     guard weight.hasAtMostOneFractionalDigit else {
       throw WorkoutModelError.invalidWeightPrecision
     }

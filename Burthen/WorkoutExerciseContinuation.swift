@@ -12,26 +12,25 @@ struct WorkoutExerciseContinuation: View {
 
   var body: some View {
     Button(action: continueWorkout) {
-      Label {
+      HStack(alignment: .firstTextBaseline) {
         switch progression {
         case .nextExercise(_, let name):
-          VStack(alignment: .leading, spacing: LayoutMetrics.Spacing.extraSmall) {
-            Text("Next Exercise")
-              .font(.headline)
-            Text(name)
-              .font(.body)
-          }
+          Text("Next Exercise: \(Text(name).font(.body))")
         case .reviewWorkout:
           Text("Review Workout")
-            .font(.headline)
         }
-      } icon: {
+
+        Spacer()
+
         Image(systemName: systemImage)
+          .accessibilityHidden(true)
       }
+      .font(.headline)
       .frame(maxWidth: .infinity, alignment: .leading)
       .multilineTextAlignment(.leading)
     }
     .buttonStyle(.borderedProminent)
+    .tint(.pink)
     .controlSize(.large)
     .accessibilityLabel(accessibilityLabel)
     .accessibilityInputLabels(accessibilityInputLabels)

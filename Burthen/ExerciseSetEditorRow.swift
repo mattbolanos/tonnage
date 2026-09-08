@@ -73,12 +73,11 @@ struct ExerciseSetEditorRow: View {
           .labelStyle(.iconOnly)
           .font(.title3)
           .foregroundStyle(
-            exerciseSet.isCompleted ? Color.accentColor : Color.secondary
+            exerciseSet.isCompleted ? Color.pink : Color.secondary
           )
           .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
           .frame(
-            width: LayoutMetrics.Size.setCompletionControl,
-            height: LayoutMetrics.Size.setCompletionControl
+            width: LayoutMetrics.Size.setCompletionControl
           )
           .contentShape(.rect)
       }

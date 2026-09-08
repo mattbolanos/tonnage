@@ -31,16 +31,11 @@ struct WorkoutLockScreenView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
 
         if context.state.isRunning && !context.isStale {
-          VStack(alignment: .trailing, spacing: LayoutMetrics.Spacing.extraSmall) {
-            WorkoutElapsedTime(attributes: context.attributes)
-              .font(.title2.weight(.semibold))
-              .foregroundStyle(.pink)
-              .multilineTextAlignment(.trailing)
-            Text("Elapsed")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-          .frame(maxWidth: .infinity, alignment: .trailing)
+          WorkoutElapsedTime(attributes: context.attributes)
+            .font(.title2.weight(.semibold))
+            .foregroundStyle(.pink)
+            .multilineTextAlignment(.trailing)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
       }
     }

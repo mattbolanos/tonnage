@@ -75,6 +75,7 @@ struct ActiveWorkoutExerciseView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           .contentShape(.rect)
         }
+        .tint(.pink)
         .accessibilityLabel("Add Set")
       } header: {
         SectionHeader("Sets")

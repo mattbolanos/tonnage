@@ -152,7 +152,7 @@ struct ExerciseSetPicker: View {
 
   private var selectedWeight: Decimal? {
     let halfSteps = wholeWeight * 2 + (usesHalfWeight ? 1 : 0)
-    return halfSteps == 0 ? nil : Decimal(halfSteps) / 2
+    return Decimal(halfSteps) / 2
   }
 
   private var followingSets: [ExerciseSet] {
@@ -307,6 +307,8 @@ struct ExerciseSetPicker: View {
   }
 
   private func finish() {
+    // Confirming the displayed zero records a weight even when the wheel hasn't moved.
+    hasPendingChanges = hasPendingChanges || exerciseSet.weight != selectedWeight
     savePendingChanges()
     guard !hasPendingChanges else { return }
     dismiss()

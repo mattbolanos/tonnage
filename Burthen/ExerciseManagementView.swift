@@ -317,7 +317,7 @@ func exerciseErrorMessage(for error: Error) -> String {
   case .exerciseClassificationInUse:
     "Load and repetition tracking can’t be changed after sets have been logged."
   case .invalidWeight:
-    "Enter a starting working weight greater than zero."
+    "Enter a starting working weight of zero or more."
   case .invalidWeightPrecision:
     "Enter a starting working weight with no more than one decimal place."
   case .seededExerciseIsReadOnly:

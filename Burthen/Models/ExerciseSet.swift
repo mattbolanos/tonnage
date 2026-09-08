@@ -73,7 +73,7 @@ final class ExerciseSet {
     case (nil, nil):
       break
     case (.some(let weight), .some):
-      guard weight > 0 else { throw WorkoutModelError.invalidWeight }
+      guard weight >= 0 else { throw WorkoutModelError.invalidWeight }
       guard weight.hasAtMostOneFractionalDigit else {
         throw WorkoutModelError.invalidWeightPrecision
       }
